@@ -1,20 +1,43 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# 🍰 Mini Crumbs: Handcrafted Premium Bakery
 
-# Run and deploy your AI Studio app
+Welcome to the digital home of **Mini Crumbs**, where every crumb tells a story. We specialize in handcrafted, premium desserts made with the finest ingredients and a touch of magic.
 
-This contains everything you need to run your app locally.
+## ✨ Our Offerings
 
-View your app in AI Studio: https://ai.studio/apps/fe00c8d7-8aa1-45cb-a428-2e77a7d18382
+We bring the art of baking to your doorstep with a curated selection of treats:
 
-## Run Locally
+*   **Signature Skillet Cakes**: Our famous warm, gooey cakes served straight from the heart.
+*   **Artisanal Brownies**: Rich, fudgy, and packed with premium chocolate.
+*   **Custom Cake Creations**: Bespoke designs for your most special moments—weddings, birthdays, and anniversaries.
+*   **Daily Delights**: A rotating menu of seasonal treats and bakery classics.
 
-**Prerequisites:**  Node.js
+---
 
+## 📱 The Mini Crumbs Experience
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+We've built a premium digital platform to make ordering your favorite treats as sweet as eating them:
+
+*   **Seamless Menu Browsing**: Explore our full catalog with high-resolution imagery and detailed descriptions.
+*   **Custom Quote System**: Get a personalized design and price for your dream cake directly through our integrated request system.
+*   **Secure UPI Payments**: Pay instantly using GPay, PhonePe, or any UPI app with dynamic QR code generation.
+*   **Direct WhatsApp Integration**: Your orders are sent straight to our kitchen via WhatsApp for a personal, real-time experience.
+*   **Real-time Order Tracking**: Stay updated as your order moves from "Baking" to "Delivered".
+
+---
+
+## 🧁 Why Choose Mini Crumbs?
+
+1.  **Freshness Guaranteed**: Every order is baked fresh—never stored.
+2.  **Premium Ingredients**: We use only the highest quality chocolates, flours, and seasonal fruits.
+3.  **Personal Touch**: As a boutique bakery, we put individual care into every single skillet and custom design.
+
+---
+
+## 📍 Get in Touch
+
+Ready to satisfy your cravings?
+*   **Visit Us**: [Mini Crumbs Website](https://fasisyed467-max.github.io/MiniCrumbswebsite/)
+*   **WhatsApp**: [Message Us Directly](https://wa.me/916304407083)
+*   **Instagram**: [@minicrumbs_](https://instagram.com/minicrumbs_)
+
+*Handcrafted with love. Baked for your joy.*
