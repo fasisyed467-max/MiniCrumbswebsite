@@ -7,6 +7,7 @@ import { CATEGORIES, PRODUCTS } from '../../data/constants';
 import { Product, CartItem } from '../../types';
 
 interface MenuSectionProps {
+   products: Product[];
    cart: CartItem[];
    onOpenSizeSelector: (product: Product) => void;
    updateCartQuantity: (id: string, delta: number) => void;
@@ -15,11 +16,11 @@ interface MenuSectionProps {
    onViewAll?: () => void;
 }
 
-export function MenuSection({ cart, onOpenSizeSelector, updateCartQuantity, showTitle = true, showViewAllBtn = true, onViewAll }: MenuSectionProps) {
+export function MenuSection({ products, cart, onOpenSizeSelector, updateCartQuantity, showTitle = true, showViewAllBtn = true, onViewAll }: MenuSectionProps) {
    const [activeCategory, setActiveCategory] = useState("All");
    const [searchQuery, setSearchQuery] = useState("");
 
-   const filteredProducts = PRODUCTS.filter(p => {
+   const filteredProducts = products.filter(p => {
       const matchesCategory = activeCategory === "All" || p.category === activeCategory;
       const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.desc.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
@@ -29,7 +30,7 @@ export function MenuSection({ cart, onOpenSizeSelector, updateCartQuantity, show
    const isLimitedView = showViewAllBtn;
    const displayedProducts = isLimitedView ? filteredProducts.slice(0, 6) : filteredProducts;
 
-   const getProductTotalQuantity = (productId: number) => {
+   const getProductTotalQuantity = (productId: string) => {
       return cart.filter(item => item.productId === productId).reduce((acc, item) => acc + item.quantity, 0);
    };
 

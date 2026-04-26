@@ -40,15 +40,15 @@ export function SizeSelector({ isOpen, product, onClose, cart, updateQuantity, o
                   <p className="text-cocoa text-sm mb-6 pb-4 border-b border-cocoa/10">Choose variants for {product.name}</p>
                   
                   <div className="space-y-4">
-                     {(["1/2kg", "1kg", "1.5kg"] as Size[]).map(size => {
+                     {Object.entries(product.prices || {}).map(([size, price]) => {
                         const id = `${product.id}-${size}`;
                         const cartItem = cart.find(i => i.id === id);
                         const qty = cartItem ? cartItem.quantity : 0;
                         return (
                            <div key={size} className="flex justify-between items-center p-4 rounded-2xl bg-cream-dark border border-white">
                               <div>
-                                 <p className="font-medium text-espresso">{size}</p>
-                                 <p className="text-sm text-cocoa mt-0.5">₹{product.prices[size]}</p>
+                                 <p className="font-medium text-espresso uppercase tracking-wide text-xs">{size}</p>
+                                 <p className="text-sm font-bold text-cocoa mt-0.5">₹{price as number}</p>
                               </div>
                               <div className="flex items-center gap-4 bg-white rounded-full p-1 shadow-sm border border-cocoa/5">
                                  <button 

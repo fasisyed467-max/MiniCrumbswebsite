@@ -8,6 +8,7 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, onOpenSizeSelector }: ProductCardProps) {
+   console.log("IMAGE URL:", product.image);
    return (
       <motion.div
          layout
@@ -19,13 +20,23 @@ export function ProductCard({ product, onOpenSizeSelector }: ProductCardProps) {
       >
          <div className="aspect-[4/3] relative overflow-hidden bg-cream-dark">
             <img
-               src={product.image}
+               src={encodeURI(product.image)}
                alt={product.name}
                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-            />
+               loading="lazy"
+               onError={(e) => {
+                  console.log("Failed image:", product.image);
+                  e.currentTarget.src = "https://via.placeholder.com/300x200?text=Image+Error";
+               }}
+               />
             {product.popular && (
                <div className="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1.5 rounded-full text-xs font-semibold text-cocoa shadow-sm flex items-center gap-1">
                   <Star size={12} className="text-gold fill-gold" /> Popular
+               </div>
+            )}
+            {!product.is_available && (
+               <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center">
+                  <span className="text-[10px] font-black text-white uppercase tracking-tighter -rotate-12 border-2 border-white/50 px-2 py-1 rounded">SOLD OUT</span>
                </div>
             )}
             <div className="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1.5 rounded-full text-sm font-medium text-espresso shadow-sm">
@@ -36,10 +47,15 @@ export function ProductCard({ product, onOpenSizeSelector }: ProductCardProps) {
             <h3 className="text-xl font-medium mb-2 text-espresso">{product.name}</h3>
             <p className="text-sm font-light text-cocoa/80 mb-6 flex-grow">{product.desc}</p>
             <button
-               onClick={() => onOpenSizeSelector(product)}
-               className="w-full bg-cream-dark text-espresso font-medium py-3.5 rounded-xl hover:bg-cocoa hover:text-white transition-colors flex items-center justify-center gap-2"
+               onClick={() => product.is_available && onOpenSizeSelector(product)}
+               disabled={!product.is_available}
+               className={`w-full font-medium py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 ${
+                  product.is_available 
+                     ? "bg-cream-dark text-espresso hover:bg-cocoa hover:text-white" 
+                     : "bg-espresso/5 text-espresso/20 cursor-not-allowed"
+               }`}
             >
-               <Plus size={16} /> Add to Cart
+               <Plus size={16} /> {product.is_available ? "Add to Cart" : "Out of Stock"}
             </button>
          </div>
       </motion.div>

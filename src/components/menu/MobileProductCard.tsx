@@ -30,6 +30,11 @@ export function MobileProductCard({ product, qty, onMinus, onOpenSizeSelector }:
                   <Star size={10} className="text-gold fill-gold" />
                </div>
             )}
+            {!product.is_available && (
+               <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center">
+                  <span className="text-[10px] font-black text-white uppercase tracking-tighter -rotate-12 border-2 border-white/50 px-2 py-1 rounded">SOLD OUT</span>
+               </div>
+            )}
          </div>
 
          {/* Interactive Content Layer */}
@@ -52,8 +57,11 @@ export function MobileProductCard({ product, qty, onMinus, onOpenSizeSelector }:
                   </button>
                   <span className="text-[16px] font-bold w-4 text-center text-espresso">{qty}</span>
                   <button 
-                     onClick={() => onOpenSizeSelector(product)} 
-                     className="w-9 h-9 rounded-full bg-espresso text-cream flex items-center justify-center shadow-md active:scale-90 transition-transform"
+                     onClick={() => product.is_available && onOpenSizeSelector(product)} 
+                     disabled={!product.is_available}
+                     className={`w-9 h-9 rounded-full flex items-center justify-center shadow-md active:scale-90 transition-all ${
+                        product.is_available ? "bg-espresso text-cream" : "bg-cocoa/5 text-cocoa/20 cursor-not-allowed"
+                     }`}
                   >
                      <Plus size={18} />
                   </button>

@@ -3,6 +3,7 @@ import { MenuSection } from '../components/menu/MenuSection';
 import { Product, CartItem } from '../types';
 
 interface FullMenuProps {
+   products: Product[];
    cart: CartItem[];
    onOpenSizeSelector: (product: Product) => void;
    updateCartQuantity: (id: string, delta: number) => void;
@@ -10,7 +11,7 @@ interface FullMenuProps {
    onCheckout?: () => void;
 }
 
-export function FullMenu({ cart, onOpenSizeSelector, updateCartQuantity, onBack, onCheckout }: FullMenuProps) {
+export function FullMenu({ products, cart, onOpenSizeSelector, updateCartQuantity, onBack, onCheckout }: FullMenuProps) {
    const totalItems = cart.reduce((a, b) => a + b.quantity, 0);
 
    return (
@@ -33,6 +34,7 @@ export function FullMenu({ cart, onOpenSizeSelector, updateCartQuantity, onBack,
          </div>
          
          <MenuSection 
+            products={products}
             cart={cart}
             onOpenSizeSelector={onOpenSizeSelector}
             updateCartQuantity={updateCartQuantity}

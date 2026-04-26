@@ -18,31 +18,14 @@ export function createWaLink(cart: CartItem[] = [], form?: CheckoutFormData) {
    }
 
    if (form) {
-      // Format datetime-local (YYYY-MM-DDTHH:mm) to something nice
-      let readableTime = form.time;
-      try {
-         if (form.time) {
-            const date = new Date(form.time);
-            if (!isNaN(date.getTime())) {
-               readableTime = date.toLocaleString('en-IN', { 
-                  weekday: 'short', 
-                  day: 'numeric', 
-                  month: 'short', 
-                  hour: 'numeric', 
-                  minute: '2-digit',
-                  hour12: true 
-               });
-            }
-         }
-      } catch (e) {
-         console.error("Error formatting date:", e);
-      }
 
       text += `*DELIVERY DETAILS*\n`;
       text += `📍 *Address:* ${form.address}\n`;
-      text += `⏰ *Date & Time:* ${readableTime}\n`;
       text += `👤 *Name:* ${form.name}\n`;
       text += `📞 *Phone:* ${form.phone}\n`;
+      if (form.paymentScreenshotUrl) {
+         text += `📸 *Payment Screenshot:* ${form.paymentScreenshotUrl}\n`;
+      }
       if (form.notes) {
          text += `📝 *Notes:* ${form.notes}\n`;
       }

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Upload, Image as ImageIcon, MessageCircle } from 'lucide-react';
+import { X, Upload, Image as ImageIcon, MessageCircle, Loader2 } from 'lucide-react';
 import { PHONE_NUMBER } from '../../data/constants';
+import { api, fileToBase64 } from '../../utils/api';
 
 export function CustomCakeModal() {
    const [showCustomModal, setShowCustomModal] = useState(false);
@@ -15,20 +16,28 @@ export function CustomCakeModal() {
       imageName: ""
    });
 
+   const [isSubmitting, setIsSubmitting] = useState(false);
+   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
    useEffect(() => {
       const handleOpen = () => setShowCustomModal(true);
       document.addEventListener('openCustomModal', handleOpen);
       return () => document.removeEventListener('openCustomModal', handleOpen);
    }, []);
 
-   const handleCustomSubmit = (e: React.FormEvent) => {
+   const handleCustomSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
+      setIsSubmitting(true);
+
+      // Submit to Backend
+      await api.submitCustomOrder(customForm, selectedFile || undefined);
+
       let text = `Hi Mini Crumbs, I'd like a quote for a Custom Cake:%0A%0A`;
       text += `*Details:*%0A`;
       text += `*Size:* ${customForm.weight}%0A`;
       text += `*Message on Cake:* ${customForm.cakeMessage}%0A`;
       if (customForm.imageName) {
-         text += `*Reference Image:* (I will send it in chat)%0A`;
+         text += `*Reference Image:* (Sent to system)%0A`;
       }
       text += `%0A*Delivery Date & Time:* ${customForm.time}%0A`;
       text += `*Delivery Location:* ${customForm.location}%0A`;
@@ -37,6 +46,7 @@ export function CustomCakeModal() {
       text += `Please let me know the estimated price.`;
 
       window.open(`https://wa.me/${PHONE_NUMBER}?text=${text}`, '_blank');
+      setIsSubmitting(false);
       setShowCustomModal(false);
    };
 
@@ -73,7 +83,18 @@ export function CustomCakeModal() {
                         <div className="grid grid-cols-2 gap-4">
                            <div>
                               <label className="block text-sm font-medium text-cocoa mb-1.5">Phone Number</label>
-                              <input required type="tel" value={customForm.phone} onChange={e => setCustomForm({ ...customForm, phone: e.target.value })} className="w-full bg-white border border-cocoa/20 rounded-xl px-4 py-2.5 outline-none focus:border-cocoa/50 focus:ring-2 focus:ring-cocoa/10 text-espresso text-sm" placeholder="+1..." />
+                              <input 
+                                 required 
+                                 type="tel" 
+                                 pattern="[0-9]{10}"
+                                 minLength={10}
+                                 maxLength={10}
+                                 title="Please enter a valid 10-digit phone number"
+                                 value={customForm.phone} 
+                                 onChange={e => setCustomForm({ ...customForm, phone: e.target.value })} 
+                                 className="w-full bg-white border border-cocoa/20 rounded-xl px-4 py-2.5 outline-none focus:border-cocoa/50 focus:ring-2 focus:ring-cocoa/10 text-espresso text-sm" 
+                                 placeholder="10-digit mobile number" 
+                              />
                            </div>
                            <div>
                               <label className="block text-sm font-medium text-cocoa mb-1.5">Delivery Time</label>
@@ -103,7 +124,13 @@ export function CustomCakeModal() {
                         <div>
                            <label className="block text-sm font-medium text-cocoa mb-1.5">Reference Image (Optional)</label>
                            <div className="w-full bg-cream-dark border-2 border-dashed border-cocoa/20 rounded-xl px-4 py-6 text-center hover:bg-blush/20 transition-colors relative">
-                              <input type="file" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={e => setCustomForm({ ...customForm, imageName: e.target.files?.[0]?.name || "" })} />
+                              <input type="file" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={e => {
+                                 const file = e.target.files?.[0];
+                                 if (file) {
+                                    setSelectedFile(file);
+                                    setCustomForm({ ...customForm, imageName: file.name });
+                                 }
+                              }} />
                               <div className="flex flex-col items-center gap-2 pointer-events-none">
                                  {customForm.imageName ? (
                                     <>
@@ -125,9 +152,13 @@ export function CustomCakeModal() {
                   </div>
 
                   <div className="p-6 bg-white border-t border-cocoa/10 shrink-0">
-                     <button type="submit" form="customCakeForm" className="w-full bg-cocoa text-cream py-4 rounded-xl font-medium text-base flex justify-center items-center gap-2 hover:bg-espresso transition-colors">
-                        Get Quote on WhatsApp <MessageCircle size={18} />
-                     </button>
+                      <button disabled={isSubmitting} type="submit" form="customCakeForm" className="w-full bg-cocoa text-cream py-4 rounded-xl font-medium text-base flex justify-center items-center gap-2 hover:bg-espresso transition-colors disabled:opacity-70">
+                        {isSubmitting ? (
+                           <>Processing... <Loader2 className="animate-spin" size={18} /></>
+                        ) : (
+                           <>Get Quote on WhatsApp <MessageCircle size={18} /></>
+                        )}
+                      </button>
                   </div>
                </motion.div>
             </motion.div>

@@ -8,6 +8,7 @@ import { Footer } from '../components/layout/Footer';
 import { Product, CartItem } from '../types';
 
 interface LandingProps {
+   products: Product[];
    scrolled: boolean;
    cart: CartItem[];
    onOrder: () => void;
@@ -16,13 +17,14 @@ interface LandingProps {
    onViewFullMenu: () => void;
 }
 
-export function Landing({ scrolled, cart, onOrder, onOpenSizeSelector, updateCartQuantity, onViewFullMenu }: LandingProps) {
+export function Landing({ products, scrolled, cart, onOrder, onOpenSizeSelector, updateCartQuantity, onViewFullMenu }: LandingProps) {
     return (
         <div className="min-h-screen relative overflow-x-hidden bg-[#F9F8F6]">
             <Header scrolled={scrolled} onOrder={onOrder} />
             <Hero onOrder={onOrder} />
             <Marquee />
             <MenuSection 
+               products={products}
                cart={cart}
                onOpenSizeSelector={onOpenSizeSelector}
                updateCartQuantity={updateCartQuantity}
