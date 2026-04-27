@@ -30,7 +30,7 @@ export function MobileProductCard({ product, qty, onMinus, onOpenSizeSelector }:
                   <Star size={10} className="text-gold fill-gold" />
                </div>
             )}
-            {!product.is_available && (
+            {(!product.is_available || Object.values(product.stock || {}).reduce((a, b) => a + (b || 0), 0) <= 0) && (
                <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center">
                   <span className="text-[10px] font-black text-white uppercase tracking-tighter -rotate-12 border-2 border-white/50 px-2 py-1 rounded">SOLD OUT</span>
                </div>
@@ -45,6 +45,11 @@ export function MobileProductCard({ product, qty, onMinus, onOpenSizeSelector }:
                <div className="flex flex-col">
                   <p className="text-xs text-cocoa uppercase tracking-wider font-semibold opacity-60 mb-0.5">Price</p>
                   <p className="text-[16px] font-black text-espresso">₹{product.price}</p>
+                  {product.is_available && (
+                     <p className="text-[10px] font-bold text-green-600/60 uppercase tracking-widest mt-1">
+                        {Object.values(product.stock || {}).reduce((a, b) => a + (b || 0), 0)} left
+                     </p>
+                  )}
                </div>
                
                <div className="flex items-center gap-3 bg-white/80 backdrop-blur-sm rounded-full p-1.5 shadow-sm border border-espresso/5">

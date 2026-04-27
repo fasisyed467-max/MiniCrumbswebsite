@@ -34,13 +34,20 @@ export function ProductCard({ product, onOpenSizeSelector }: ProductCardProps) {
                   <Star size={12} className="text-gold fill-gold" /> Popular
                </div>
             )}
-            {!product.is_available && (
+            {(!product.is_available || Object.values(product.stock || {}).reduce((a, b) => a + (b || 0), 0) <= 0) && (
                <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center">
                   <span className="text-[10px] font-black text-white uppercase tracking-tighter -rotate-12 border-2 border-white/50 px-2 py-1 rounded">SOLD OUT</span>
                </div>
             )}
-            <div className="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1.5 rounded-full text-sm font-medium text-espresso shadow-sm">
-               ₹{product.price}
+            <div className="absolute top-4 right-4 flex flex-col gap-2 items-end">
+               <div className="bg-white/90 backdrop-blur px-3 py-1.5 rounded-full text-sm font-medium text-espresso shadow-sm">
+                  ₹{product.price}
+               </div>
+               {product.is_available && (
+                  <div className="bg-white/90 backdrop-blur px-2 py-1 rounded-lg text-[10px] font-bold text-cocoa shadow-sm uppercase tracking-wider">
+                     {Object.values(product.stock || {}).reduce((a, b) => a + (b || 0), 0)} in stock
+                  </div>
+               )}
             </div>
          </div>
          <div className="p-6 flex flex-col flex-grow">

@@ -44,11 +44,19 @@ export function SizeSelector({ isOpen, product, onClose, cart, updateQuantity, o
                         const id = `${product.id}-${size}`;
                         const cartItem = cart.find(i => i.id === id);
                         const qty = cartItem ? cartItem.quantity : 0;
+                        const variantStock = product.stock?.[size as keyof typeof product.stock] || 0;
+                        const isOutOfStock = variantStock <= qty;
+
                         return (
                            <div key={size} className="flex justify-between items-center p-4 rounded-2xl bg-cream-dark border border-white">
                               <div>
                                  <p className="font-medium text-espresso uppercase tracking-wide text-xs">{size}</p>
-                                 <p className="text-sm font-bold text-cocoa mt-0.5">₹{price as number}</p>
+                                 <div className="flex items-center gap-2 mt-0.5">
+                                    <p className="text-sm font-bold text-cocoa">₹{price as number}</p>
+                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${variantStock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                       {variantStock} left
+                                    </span>
+                                 </div>
                               </div>
                               <div className="flex items-center gap-4 bg-white rounded-full p-1 shadow-sm border border-cocoa/5">
                                  <button 
@@ -60,8 +68,13 @@ export function SizeSelector({ isOpen, product, onClose, cart, updateQuantity, o
                                  </button>
                                  <span className="font-medium text-espresso w-4 text-center">{qty}</span>
                                  <button 
-                                    onClick={() => onAdd(product, size)} 
-                                    className="w-9 h-9 flex items-center justify-center bg-espresso text-cream rounded-full shadow-md"
+                                    onClick={() => !isOutOfStock && onAdd(product, size as Size)} 
+                                    disabled={isOutOfStock}
+                                    className={`w-9 h-9 flex items-center justify-center rounded-full shadow-md transition-all ${
+                                       isOutOfStock 
+                                       ? "bg-cocoa/10 text-cocoa/30 cursor-not-allowed" 
+                                       : "bg-espresso text-cream active:scale-95"
+                                    }`}
                                  >
                                     <Plus size={16} />
                                  </button>

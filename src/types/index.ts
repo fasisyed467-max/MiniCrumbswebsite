@@ -24,9 +24,11 @@ export type Product = {
    desc: string;
    price: number;
    prices: Record<string, number>;
+   stock: Record<string, number>;
    category: string;
    image: string;
    popular: boolean;
+   is_available: boolean;
 };
 
 export type Order = {

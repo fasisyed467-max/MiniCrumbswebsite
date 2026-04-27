@@ -141,13 +141,19 @@ export default function Products({ onEdit }: ProductsProps) {
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                   />
                   <div className="absolute top-4 left-4 flex gap-2">
-                    <span className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest backdrop-blur-md ${
-                      product.is_available 
-                        ? 'bg-green-500/10 text-green-600 border border-green-500/20' 
-                        : 'bg-red-500/10 text-red-600 border border-red-500/20'
-                    }`}>
-                      {product.is_available ? 'In Stock' : 'Out of Stock'}
-                    </span>
+                    {(() => {
+                      const totalStock = Object.values(product.stock || {}).reduce((a, b) => a + (b || 0), 0);
+                      const isOutOfStock = !product.is_available || totalStock <= 0;
+                      return (
+                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest backdrop-blur-md ${
+                          !isOutOfStock
+                            ? 'bg-green-500/10 text-green-600 border border-green-500/20' 
+                            : 'bg-red-500/10 text-red-600 border border-red-500/20'
+                        }`}>
+                          {!isOutOfStock ? `In Stock (${totalStock})` : 'Out of Stock'}
+                        </span>
+                      );
+                    })()}
                     <span className="px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-white/80 text-espresso border border-white/20">
                       {product.category}
                     </span>
@@ -190,9 +196,16 @@ export default function Products({ onEdit }: ProductsProps) {
 
                   <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
                     {product.prices && Object.entries(product.prices).map(([size, price]) => (
-                      <div key={size} className="flex-shrink-0 px-3 py-1.5 bg-cream rounded-xl border border-espresso/5">
+                      <div key={size} className="flex-shrink-0 px-3 py-1.5 bg-cream rounded-xl border border-espresso/5 min-w-[70px]">
                         <span className="text-[10px] font-bold text-cocoa/40 block leading-none mb-1">{size}</span>
-                        <span className="text-xs font-bold text-espresso">₹{price as number}</span>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-bold text-espresso">₹{price as number}</span>
+                          <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${
+                            (product.stock?.[size] || 0) > 0 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+                          }`}>
+                            {product.stock?.[size] || 0}
+                          </span>
+                        </div>
                       </div>
                     ))}
                   </div>
