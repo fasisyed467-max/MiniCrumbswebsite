@@ -1,6 +1,6 @@
 import { Product } from '../types';
 
-export const PHONE_NUMBER = "9505540326"; // Using standard wa.me format without '+'
+export const PHONE_NUMBER = "919505540326"; // Using standard wa.me format (Country Code + Number) without '+'
 export const INSTAGRAM_HANDLE = "@mini_crumbs.hyd";
 
 export const CATEGORIES = ["All", "Skillet Cakes", "Brownies", "Cheesecakes", "Best Sellers", "Custom"];
