@@ -18,7 +18,8 @@ export const api = {
         image: p.image_url,
         popular: p.is_popular,
         price: parseFloat(p.price),
-        prices: typeof p.prices === 'string' ? JSON.parse(p.prices) : p.prices
+        prices: typeof p.prices === 'string' ? JSON.parse(p.prices) : p.prices,
+        stock: typeof p.stock === 'string' ? JSON.parse(p.stock) : (p.stock || {})
       })) as Product[];
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -62,22 +63,18 @@ export const api = {
     try {
       const totalAmount = cart.reduce((a, b) => a + (b.price * b.quantity), 0);
       
-      const { data, error } = await supabase
-        .from('orders')
-        .insert([{
-          customer_name: formData.name,
-          customer_phone: formData.phone,
-          delivery_address: formData.address,
-          notes: formData.notes,
-          payment_screenshot_url: formData.paymentScreenshotUrl,
-          type: 'standard',
-          total_amount: totalAmount,
-          items: cart,
-          status: 'pending'
-        }]);
+      const { error } = await supabase.rpc('place_order_with_stock', {
+        p_customer_name: formData.name,
+        p_customer_phone: formData.phone,
+        p_delivery_address: formData.address,
+        p_notes: formData.notes,
+        p_payment_screenshot_url: formData.paymentScreenshotUrl,
+        p_total_amount: totalAmount,
+        p_items: cart
+      });
 
       if (error) throw error;
-      return data;
+      return true;
     } catch (error) {
       console.error('Error submitting order:', error);
       throw error;
@@ -124,9 +121,13 @@ export const api = {
       }
 
       const prices: Record<string, number> = {};
+      const stock: Record<string, number> = {};
+      
       product.variants.forEach((v: any) => {
-        if (v.size && v.price) {
-          prices[v.size] = parseFloat(v.price);
+        if (v.size) {
+          if (v.price) prices[v.size] = parseFloat(v.price);
+          if (v.stock) stock[v.size] = parseInt(v.stock);
+          else stock[v.size] = 0;
         }
       });
 
@@ -140,7 +141,8 @@ export const api = {
           image_url: imageUrl,
           is_available: product.availability === 'Yes',
           is_popular: false,
-          prices: prices
+          prices: prices,
+          stock: stock
         }]);
 
       if (error) throw error;
@@ -208,6 +210,17 @@ export const api = {
       .getPublicUrl(filePath);
 
     return publicUrl;
+  },
+
+  async getSystemMetrics() {
+    try {
+      const { data, error } = await supabase.rpc('get_system_metrics');
+      if (error) throw error;
+      return data[0];
+    } catch (error) {
+      console.error('Error fetching system metrics:', error);
+      return null;
+    }
   }
 };
 

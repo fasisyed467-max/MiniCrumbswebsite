@@ -35,7 +35,7 @@ interface AdminDashboardProps {
 }
 
 export function AdminDashboard({ onBack }: AdminDashboardProps) {
-  const [view, setView] = useState<'overview' | 'add-product' | 'orders' | 'custom-orders' | 'products'>('overview');
+  const [view, setView] = useState<'overview' | 'add-product' | 'orders' | 'custom-orders' | 'products' | 'maintenance'>('overview');
   const [stats, setStats] = useState({
     totalRevenue: 0,
     ordersToday: 0,
@@ -53,6 +53,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
     else if (path === '/dashboard/custom-orders') setView('custom-orders');
     else if (path === '/dashboard/add-product') setView('add-product');
     else if (path === '/dashboard/products') setView('products');
+    else if (path === '/dashboard/maintenance') setView('maintenance');
 
     fetchMetrics();
     
@@ -147,7 +148,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
     imageName: '',
     image: '', // Existing image URL
     availability: 'Yes',
-    variants: [{ size: '1/2kg', price: '' }]
+    variants: [{ size: '1/2kg', price: '', stock: '' }]
   });
 
   const handleAddProduct = async (e: React.FormEvent) => {
@@ -156,11 +157,15 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
     
     try {
       if (editingProduct) {
-        // Build prices object
+        // Build prices and stock objects
         const prices: Record<string, number> = {};
+        const stock: Record<string, number> = {};
+        
         productForm.variants.forEach((v: any) => {
-          if (v.size && v.price) {
-            prices[v.size] = parseFloat(v.price);
+          if (v.size) {
+            if (v.price) prices[v.size] = parseFloat(v.price);
+            if (v.stock) stock[v.size] = parseInt(v.stock);
+            else stock[v.size] = 0;
           }
         });
 
@@ -176,6 +181,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
           image_url: imageUrl,
           is_available: productForm.availability === 'Yes',
           prices: prices,
+          stock: stock,
           price: parseFloat(productForm.variants[0]?.price || '0')
         });
       } else {
@@ -195,7 +201,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
           imageName: '',
           image: '',
           availability: 'Yes',
-          variants: [{ size: '1/2kg', price: '' }]
+          variants: [{ size: '1/2kg', price: '', stock: '' }]
         });
         setSelectedFile(null);
       }, 2000);
@@ -217,7 +223,8 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
       availability: product.is_available ? 'Yes' : 'No',
       variants: Object.entries(product.prices || {}).map(([size, price]) => ({
         size,
-        price: String(price)
+        price: String(price),
+        stock: String(product.stock?.[size] || '0')
       }))
     });
     setView('add-product');
@@ -245,6 +252,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
               { id: 'orders', icon: ListOrdered, label: 'ORDER LIST' },
               { id: 'custom-orders', icon: Sparkles, label: 'CUSTOM ORDERS' },
               { id: 'add-product', icon: PlusCircle, label: 'ADD PRODUCT' },
+              { id: 'maintenance', icon: Settings, label: 'MAINTENANCE' },
             ].map((item) => (
               <button
                 key={item.id}
@@ -484,7 +492,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
                       type="button"
                       onClick={() => setProductForm({
                         ...productForm, 
-                        variants: [...productForm.variants, { size: '', price: '' }]
+                        variants: [...productForm.variants, { size: '', price: '', stock: '' }]
                       })}
                       className="text-xs font-bold text-cocoa bg-blush/30 px-3 py-1.5 rounded-full hover:bg-blush/50 transition-colors flex items-center gap-1"
                     >
@@ -521,6 +529,20 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
                               setProductForm({...productForm, variants: newVariants});
                             }}
                             className="w-full bg-cream-dark/50 border-2 border-transparent focus:border-blush/30 focus:bg-white rounded-2xl px-5 py-3.5 outline-none transition-all text-sm"
+                          />
+                        </div>
+                        <div className="w-24">
+                          <input 
+                            required
+                            type="number" 
+                            placeholder="Stock"
+                            value={variant.stock}
+                            onChange={e => {
+                              const newVariants = [...productForm.variants];
+                              newVariants[index].stock = e.target.value;
+                              setProductForm({...productForm, variants: newVariants});
+                            }}
+                            className="w-full bg-cream-dark/50 border-2 border-transparent focus:border-blush/30 focus:bg-white rounded-2xl px-4 py-3.5 outline-none transition-all text-sm"
                           />
                         </div>
                         {productForm.variants.length > 1 && (
@@ -620,24 +642,38 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
                 <Products onEdit={startEditing} />
               </motion.div>
             ) : view === 'orders' ? (
-            <motion.div 
-              key="orders"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-            >
-              <Orders />
-            </motion.div>
-          ) : (
-            <motion.div 
-              key="custom-orders"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-            >
-              <CustomOrders />
-            </motion.div>
-          )}
+              <motion.div 
+                key="orders"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+              >
+                <Orders />
+              </motion.div>
+            ) : view === 'custom-orders' ? (
+              <motion.div 
+                key="custom-orders"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+              >
+                <CustomOrders />
+              </motion.div>
+            ) : (
+              <motion.div 
+                key="maintenance"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="max-w-4xl mx-auto"
+              >
+                <div className="mb-10">
+                  <h2 className="text-4xl font-serif font-bold text-espresso">System Maintenance</h2>
+                  <p className="text-cocoa/60 mt-2">Monitor your Database infrastructure and free tier limits.</p>
+                </div>
+                <DatabaseMaintenance />
+              </motion.div>
+            )}
         </AnimatePresence>
         </div>
       </main>
@@ -651,6 +687,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
             { id: 'orders', icon: ListOrdered, label: 'Orders' },
             { id: 'custom-orders', icon: Sparkles, label: 'Custom' },
             { id: 'add-product', icon: PlusCircle, label: 'Add' },
+            { id: 'maintenance', icon: Settings, label: 'Maint' },
           ].map((item) => (
             <button
               key={item.id}
@@ -673,6 +710,95 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
           ))}
         </div>
       </nav>
+    </div>
+  );
+}
+
+function DatabaseMaintenance() {
+  const [metrics, setMetrics] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      try {
+        const data = await api.getSystemMetrics();
+        setMetrics(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchMetrics();
+  }, []);
+
+  if (isLoading) return <div className="mt-12 h-32 bg-white rounded-[2.5rem] animate-pulse border border-espresso/5 shadow-sm" />;
+  if (!metrics) return null;
+
+  const dbLimit = 500 * 1024 * 1024; // 500MB
+  const storageLimit = 1024 * 1024 * 1024; // 1GB
+  
+  const dbUsage = (metrics.db_size_bytes / dbLimit) * 100;
+  const storageUsage = (metrics.storage_size_bytes / storageLimit) * 100;
+
+  return (
+    <div className="mt-16 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="flex items-center gap-3 ml-2">
+        <div className="w-8 h-8 bg-cocoa/10 rounded-lg flex items-center justify-center text-cocoa">
+          <Settings size={18} />
+        </div>
+        <h3 className="text-2xl font-serif font-bold text-espresso">Database Maintenance</h3>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* DB Usage */}
+        <div className="bg-white p-8 rounded-[2.5rem] border border-espresso/5 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <span className="text-[10px] font-bold text-cocoa/40 uppercase tracking-widest block mb-1">Database Storage</span>
+              <span className="text-sm font-bold text-espresso">{(metrics.db_size_bytes / (1024 * 1024)).toFixed(2)} MB <span className="text-cocoa/30">/ 500 MB</span></span>
+            </div>
+            <div className={`px-3 py-1 rounded-full text-[10px] font-bold ${dbUsage > 80 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+              {dbUsage.toFixed(1)}%
+            </div>
+          </div>
+          <div className="h-3 bg-cream rounded-full overflow-hidden p-0.5 border border-espresso/5">
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.min(100, dbUsage)}%` }}
+              className={`h-full rounded-full transition-all duration-1000 ${dbUsage > 80 ? 'bg-red-400' : 'bg-gradient-to-r from-cocoa to-espresso'}`}
+            />
+          </div>
+          <div className="mt-4 flex items-center gap-2">
+            <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+            <p className="text-[10px] text-cocoa/40 font-medium italic">Database Free Tier Health: Optimal</p>
+          </div>
+        </div>
+
+        {/* Storage Usage */}
+        <div className="bg-white p-8 rounded-[2.5rem] border border-espresso/5 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <span className="text-[10px] font-bold text-cocoa/40 uppercase tracking-widest block mb-1">Media Assets</span>
+              <span className="text-sm font-bold text-espresso">{(metrics.storage_size_bytes / (1024 * 1024)).toFixed(2)} MB <span className="text-cocoa/30">/ 1 GB</span></span>
+            </div>
+            <div className={`px-3 py-1 rounded-full text-[10px] font-bold ${storageUsage > 80 ? 'bg-red-100 text-red-600' : 'bg-blush/20 text-blush'}`}>
+              {storageUsage.toFixed(1)}%
+            </div>
+          </div>
+          <div className="h-3 bg-cream rounded-full overflow-hidden p-0.5 border border-espresso/5">
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.min(100, storageUsage)}%` }}
+              className={`h-full rounded-full transition-all duration-1000 ${storageUsage > 80 ? 'bg-red-400' : 'bg-gradient-to-r from-blush to-pink-400'}`}
+            />
+          </div>
+          <div className="mt-4 flex items-center gap-2">
+            <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+            <p className="text-[10px] text-cocoa/40 font-medium italic">Storage Status: Active & Synced</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

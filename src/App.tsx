@@ -133,10 +133,20 @@ export default function App() {
 
    const addItemToCart = (product: Product, size: Size) => {
       const id = `${product.id}-${size}`;
+      const variantStock = product.stock?.[size] || 0;
+
       setCart(prev => {
          const existing = prev.find(item => item.id === id);
          if (existing) {
+            if (existing.quantity >= variantStock) {
+               alert(`Only ${variantStock} units of ${product.name} (${size}) available.`);
+               return prev;
+            }
             return prev.map(item => item.id === id ? { ...item, quantity: item.quantity + 1 } : item);
+         }
+         if (variantStock <= 0) {
+            alert(`Sorry, ${product.name} (${size}) is out of stock.`);
+            return prev;
          }
          return [...prev, {
             id,
@@ -147,12 +157,19 @@ export default function App() {
             quantity: 1
          }];
       });
-      setSizeModal({ isOpen: false, product: null });
+      setSizeModal({ isOpen: false, product: null }); 
    };
 
    const updateCartQuantity = (id: string, delta: number) => {
       setCart(prev => prev.map(item => {
          if (item.id === id) {
+            const product = products.find(p => p.id === item.productId);
+            const variantStock = product?.stock?.[item.size] || 0;
+            
+            if (delta > 0 && item.quantity >= variantStock) {
+               alert(`Only ${variantStock} units available.`);
+               return item;
+            }
             return { ...item, quantity: Math.max(0, item.quantity + delta) };
          }
          return item;
