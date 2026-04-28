@@ -114,6 +114,9 @@ export function CustomCakeModal() {
                            </div>
                            <div>
                               <label className="block text-sm font-medium text-cocoa mb-1.5">Delivery Location</label>
+                              <p className="text-[10px] font-bold text-espresso mb-2 leading-relaxed">
+                                 Note: Orders shipped via Rapido Parcel — charges vary based on distance from our landmark: Inspire School, Chandrayangutta.
+                              </p>
                               <input required type="text" value={customForm.location} onChange={e => setCustomForm({ ...customForm, location: e.target.value })} className="w-full bg-white border border-cocoa/20 rounded-xl px-4 py-2.5 outline-none focus:border-cocoa/50 focus:ring-2 focus:ring-cocoa/10 text-espresso text-sm" placeholder="Full Address" />
                            </div>
                         </div>

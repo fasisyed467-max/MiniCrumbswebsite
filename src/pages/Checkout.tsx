@@ -232,6 +232,9 @@ export function Checkout({
 
                                     <div>
                                         <label className="block text-sm font-medium text-cocoa mb-1.5 pl-1">Complete Delivery Address</label>
+                                        <p className="text-[11px] font-bold text-espresso mb-2.5 pl-1 leading-relaxed">
+                                            Note: Orders shipped via Rapido Parcel — charges vary based on distance from our landmark: Inspire School, Chandrayangutta.
+                                        </p>
                                         <div className="relative">
                                             <MapPin size={18} className="absolute left-4 top-3.5 text-cocoa/50" />
                                             <textarea required rows={3} value={checkoutForm.address} onChange={e => setCheckoutForm({...checkoutForm, address: e.target.value})} className="w-full bg-cream-dark border-transparent rounded-2xl pl-11 pr-4 py-3 outline-none focus:border-cocoa/30 focus:bg-white focus:ring-4 focus:ring-cocoa/5 text-espresso transition-all resize-none" placeholder="Flat, House no., Area, Landmark..."></textarea>
