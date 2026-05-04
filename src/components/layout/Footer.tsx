@@ -89,7 +89,12 @@ export function Footer({ onOrder }: FooterProps) {
 
               <div className="max-w-7xl mx-auto border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-cream/50">
                  <p>&copy; {new Date().getFullYear()} Mini Crumbs. All rights reserved.</p>
-                 <p>Design & Bake in Hyderabad.</p>
+                 <div className="flex flex-col md:items-end items-center gap-2">
+                    <p>Design & Bake in Hyderabad.</p>
+                    <a href="https://zilaxis.com" target="_blank" rel="noreferrer" className="text-gold/80 hover:text-gold transition-colors">
+                       Website built by zilaxis.com, get yours today click here
+                    </a>
+                 </div>
               </div>
            </footer>
         </>

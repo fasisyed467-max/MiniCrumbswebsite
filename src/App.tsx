@@ -90,8 +90,7 @@ export default function App() {
       setViewCheckout(true);
    };
 
-   const handleWhatsAppCheckout = async (e: React.FormEvent) => {
-      e.preventDefault();
+   const handleWhatsAppCheckout = async (): Promise<string | undefined> => {
       setIsSubmitting(true);
       
       try {
@@ -111,10 +110,9 @@ export default function App() {
          await api.submitOrder(cart, finalForm);
          
          const link = createWaLink(cart, finalForm);
-         window.open(link, '_blank');
          
          setCart([]);
-         setViewCheckout(false);
+         // Keep viewCheckout true so the user sees the success screen
          setCheckoutForm({
             name: "",
             phone: "",
@@ -123,9 +121,12 @@ export default function App() {
             paymentScreenshot: null,
             paymentScreenshotUrl: ""
          });
+         
+         return link;
       } catch (error) {
          console.error("Checkout failed:", error);
          alert("Something went wrong while placing your order. Please try again.");
+         throw error;
       } finally {
          setIsSubmitting(false);
       }

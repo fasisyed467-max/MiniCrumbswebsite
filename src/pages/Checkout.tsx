@@ -12,11 +12,11 @@ interface CheckoutProps {
    setCheckoutForm: (form: CheckoutFormData) => void;
    updateCartQuantity: (id: string, delta: number) => void;
    onBack: () => void;
-   onSubmit: (e: React.FormEvent) => void;
+   onSubmit: () => Promise<string | undefined>;
    isSubmitting: boolean;
 }
 
-type CheckoutStep = 'summary' | 'payment' | 'details';
+type CheckoutStep = 'summary' | 'payment' | 'details' | 'success';
 
 export function Checkout({
    products,
@@ -29,6 +29,7 @@ export function Checkout({
    isSubmitting
 }: CheckoutProps) {
     const [step, setStep] = useState<CheckoutStep>('summary');
+    const [waLink, setWaLink] = useState('');
     const qrRef = useRef<HTMLDivElement>(null);
 
     const total = cart.reduce((a, b) => a + (b.price * b.quantity), 0);
@@ -50,6 +51,19 @@ export function Checkout({
         const file = e.target.files?.[0];
         if (file) {
             setCheckoutForm({ ...checkoutForm, paymentScreenshot: file });
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            const link = await onSubmit();
+            if (link) {
+                setWaLink(link);
+                setStep('success');
+            }
+        } catch (error) {
+            console.error("Failed to process order", error);
         }
     };
 
@@ -80,13 +94,13 @@ export function Checkout({
                         <div key={s.id} className="flex flex-col items-center gap-2 relative">
                             <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-500 ${
                                 step === s.id ? 'bg-espresso text-cream border-espresso shadow-lg scale-110' : 
-                                (i < ['summary', 'payment', 'details'].indexOf(step) ? 'bg-green-500 border-green-500 text-white' : 'bg-white border-espresso/10 text-espresso/30')
+                                (i < ['summary', 'payment', 'details', 'success'].indexOf(step) ? 'bg-green-500 border-green-500 text-white' : 'bg-white border-espresso/10 text-espresso/30')
                             }`}>
-                                {i < ['summary', 'payment', 'details'].indexOf(step) ? <CheckCircle2 size={18} /> : <s.icon size={18} />}
+                                {i < ['summary', 'payment', 'details', 'success'].indexOf(step) ? <CheckCircle2 size={18} /> : <s.icon size={18} />}
                             </div>
                             <span className={`text-[10px] font-bold uppercase tracking-widest ${step === s.id ? 'text-espresso' : 'text-espresso/30'}`}>{s.label}</span>
                             {i < 2 && <div className={`absolute left-12 top-5 w-20 md:w-40 h-[2px] bg-espresso/5 -z-10`}>
-                                <div className={`h-full bg-green-500 transition-all duration-500 ${i < ['summary', 'payment', 'details'].indexOf(step) ? 'w-full' : 'w-0'}`}></div>
+                                <div className={`h-full bg-green-500 transition-all duration-500 ${i < ['summary', 'payment', 'details', 'success'].indexOf(step) ? 'w-full' : 'w-0'}`}></div>
                             </div>}
                         </div>
                     ))}
@@ -207,7 +221,7 @@ export function Checkout({
                             className="space-y-8"
                         >
                             <h2 className="text-2xl font-serif text-espresso mb-6">Delivery Details</h2>
-                            <form id="checkoutDeliveryForm" onSubmit={onSubmit} className="space-y-6">
+                            <form id="checkoutDeliveryForm" onSubmit={handleSubmit} className="space-y-6">
                                 <div className="bg-white rounded-3xl p-6 shadow-sm border border-cocoa/5 space-y-5">
                                     <div>
                                         <label className="block text-sm font-medium text-cocoa mb-1.5 pl-1">Full Name</label>
@@ -294,6 +308,36 @@ export function Checkout({
                                     )}
                                 </button>
                             </form>
+                        </motion.div>
+                    )}
+
+                    {step === 'success' && (
+                        <motion.div 
+                            key="success"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="space-y-8 flex flex-col items-center justify-center py-10"
+                        >
+                            <div className="w-24 h-24 bg-green-100 text-green-500 rounded-full flex items-center justify-center mb-4 border-4 border-white shadow-xl shadow-green-500/20">
+                                <CheckCircle2 size={48} />
+                            </div>
+                            <div className="text-center space-y-3">
+                                <h2 className="text-3xl font-serif text-espresso">Order Saved!</h2>
+                                <p className="text-cocoa/70 max-w-sm mx-auto">Your order has been saved in our system. Just one final step to complete it.</p>
+                            </div>
+                            
+                            <a 
+                                href={waLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-full max-w-sm bg-gradient-to-r from-[#25D366] to-[#128C7E] text-white font-semibold py-5 rounded-3xl shadow-2xl flex justify-center gap-2 items-center border border-white/20 shadow-green-500/20 active:scale-95 transition-transform"
+                                onClick={onBack}
+                            >
+                                <MessageCircle size={20} />
+                                <span className="text-[16px] tracking-wide">Send details to WhatsApp</span>
+                            </a>
+                            
+                            <p className="text-xs text-cocoa/50 mt-4 text-center">Clicking the button will open WhatsApp.</p>
                         </motion.div>
                     )}
                 </AnimatePresence>
