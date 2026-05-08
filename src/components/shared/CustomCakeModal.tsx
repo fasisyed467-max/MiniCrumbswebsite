@@ -117,6 +117,12 @@ export function CustomCakeModal() {
                               <p className="text-[10px] font-bold text-espresso mb-2 leading-relaxed">
                                  Note: Orders shipped via Rapido Parcel — charges vary based on distance from our landmark: Inspire School, Chandrayangutta.
                               </p>
+                              <label className="flex items-start gap-2 mb-3 cursor-pointer">
+                                 <input required type="checkbox" className="mt-0.5 w-3.5 h-3.5 accent-[#128C7E] shrink-0" />
+                                 <span className="text-[10px] font-medium text-cocoa leading-tight">
+                                    I understand that I have to pay the Rapido shipping charges
+                                 </span>
+                              </label>
                               <input required type="text" value={customForm.location} onChange={e => setCustomForm({ ...customForm, location: e.target.value })} className="w-full bg-white border border-cocoa/20 rounded-xl px-4 py-2.5 outline-none focus:border-cocoa/50 focus:ring-2 focus:ring-cocoa/10 text-espresso text-sm" placeholder="Full Address" />
                            </div>
                         </div>

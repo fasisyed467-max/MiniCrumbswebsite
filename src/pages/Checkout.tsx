@@ -50,6 +50,10 @@ export function Checkout({
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
+            if (file.size > 10 * 1024 * 1024) {
+                alert("File is too large. Please select an image smaller than 10MB.");
+                return;
+            }
             setCheckoutForm({ ...checkoutForm, paymentScreenshot: file });
         }
     };
@@ -249,6 +253,12 @@ export function Checkout({
                                         <p className="text-[11px] font-bold text-espresso mb-2.5 pl-1 leading-relaxed">
                                             Note: Orders shipped via Rapido Parcel — charges vary based on distance from our landmark: Inspire School, Chandrayangutta.
                                         </p>
+                                        <label className="flex items-start gap-2 mb-3 pl-1 cursor-pointer">
+                                            <input required type="checkbox" className="mt-0.5 w-3.5 h-3.5 accent-[#128C7E] shrink-0" />
+                                            <span className="text-[11px] font-medium text-cocoa leading-tight">
+                                                I understand that I have to pay the Rapido shipping charges
+                                            </span>
+                                        </label>
                                         <div className="relative">
                                             <MapPin size={18} className="absolute left-4 top-3.5 text-cocoa/50" />
                                             <textarea required rows={3} value={checkoutForm.address} onChange={e => setCheckoutForm({...checkoutForm, address: e.target.value})} className="w-full bg-cream-dark border-transparent rounded-2xl pl-11 pr-4 py-3 outline-none focus:border-cocoa/30 focus:bg-white focus:ring-4 focus:ring-cocoa/5 text-espresso transition-all resize-none" placeholder="Flat, House no., Area, Landmark..."></textarea>
@@ -262,14 +272,15 @@ export function Checkout({
                                 </div>
 
                                 <div className="bg-white rounded-3xl p-6 shadow-sm border border-cocoa/5">
-                                    <label className="block text-sm font-medium text-cocoa mb-3 pl-1">Payment Screenshot (Required)</label>
-                                    <div className="w-full bg-cream-dark border-2 border-dashed border-cocoa/10 rounded-2xl px-4 py-6 text-center hover:bg-cream transition-colors relative group">
+                                    <span className="block text-sm font-medium text-cocoa mb-3 pl-1">Payment Screenshot (Required)</span>
+                                    <label htmlFor="payment-screenshot" className="block w-full bg-cream-dark border-2 border-dashed border-cocoa/10 rounded-2xl px-4 py-6 text-center hover:bg-cream transition-colors cursor-pointer group">
                                         <input 
+                                            id="payment-screenshot"
                                             required
                                             type="file" 
                                             accept="image/*" 
                                             onChange={handleFileChange}
-                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+                                            className="hidden" 
                                         />
                                         <div className="flex flex-col items-center gap-2">
                                             {checkoutForm.paymentScreenshot ? (
@@ -290,7 +301,7 @@ export function Checkout({
                                                 </>
                                             )}
                                         </div>
-                                    </div>
+                                    </label>
                                 </div>
 
                                 <button 
@@ -326,18 +337,19 @@ export function Checkout({
                                 <p className="text-cocoa/70 max-w-sm mx-auto">Your order has been saved in our system. Just one final step to complete it.</p>
                             </div>
                             
-                            <a 
-                                href={waLink}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="w-full max-w-sm bg-gradient-to-r from-[#25D366] to-[#128C7E] text-white font-semibold py-5 rounded-3xl shadow-2xl flex justify-center gap-2 items-center border border-white/20 shadow-green-500/20 active:scale-95 transition-transform"
-                                onClick={onBack}
-                            >
-                                <MessageCircle size={20} />
-                                <span className="text-[16px] tracking-wide">Send details to WhatsApp</span>
-                            </a>
+                            <div className="w-full max-w-sm space-y-4">
+                                <a 
+                                    href={waLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="w-full bg-gradient-to-r from-[#25D366] to-[#128C7E] text-white font-semibold py-5 rounded-3xl shadow-2xl flex justify-center gap-2 items-center border border-white/20 shadow-green-500/20 active:scale-95 transition-transform"
+                                >
+                                    <MessageCircle size={20} />
+                                    <span className="text-[16px] tracking-wide">Send details to WhatsApp</span>
+                                </a>
+                            </div>
                             
-                            <p className="text-xs text-cocoa/50 mt-4 text-center">Clicking the button will open WhatsApp.</p>
+                            <p className="text-xs text-cocoa/50 mt-2 text-center">Clicking the green button will open WhatsApp.</p>
                         </motion.div>
                     )}
                 </AnimatePresence>
