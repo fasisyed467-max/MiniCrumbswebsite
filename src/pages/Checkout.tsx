@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import posthog from 'posthog-js';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowRight, Minus, Plus, MapPin, MessageCircle, CreditCard, CheckCircle2, Download, Upload, Image as ImageIcon } from 'lucide-react';
 import { CartItem, CheckoutFormData, Product } from '../types';
@@ -50,6 +51,7 @@ export function Checkout({
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
+            posthog.capture('screenshot_uploaded', { fileSize: file.size, fileType: file.type });
             if (file.size > 10 * 1024 * 1024) {
                 alert("File is too large. Please select an image smaller than 10MB.");
                 return;
@@ -60,11 +62,13 @@ export function Checkout({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        posthog.capture('order_confirm_clicked');
         try {
             const link = await onSubmit();
             if (link) {
                 setWaLink(link);
                 setStep('success');
+                posthog.capture('order_confirmed', { orderId, amount: total });
             }
         } catch (error) {
             console.error("Failed to process order", error);
@@ -76,7 +80,14 @@ export function Checkout({
             {/* Header */}
             <div className="sticky top-0 w-full z-50 bg-[#F9F8F6] border-b border-espresso/10 py-5 px-6 lg:px-12 flex items-center justify-between shadow-sm">
                <button 
-                  onClick={step === 'summary' ? onBack : () => setStep(prev => prev === 'details' ? 'payment' : 'summary')} 
+                  onClick={() => {
+                     if (step === 'summary') {
+                        posthog.capture('returned_to_home');
+                        onBack();
+                     } else {
+                        setStep(prev => prev === 'details' ? 'payment' : 'summary');
+                     }
+                  }} 
                   className="text-espresso flex items-center gap-2 font-medium bg-white px-4 py-2 rounded-full shadow-sm hover:bg-cream transition-colors"
                >
                   <ArrowRight size={18} className="rotate-180" /> Back
@@ -342,6 +353,7 @@ export function Checkout({
                                     href={waLink}
                                     target="_blank"
                                     rel="noopener noreferrer"
+                                    onClick={() => posthog.capture('whatsapp_link_clicked')}
                                     className="w-full bg-gradient-to-r from-[#25D366] to-[#128C7E] text-white font-semibold py-5 rounded-3xl shadow-2xl flex justify-center gap-2 items-center border border-white/20 shadow-green-500/20 active:scale-95 transition-transform"
                                 >
                                     <MessageCircle size={20} />

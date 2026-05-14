@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import posthog from 'posthog-js';
 import { Size, CartItem, CheckoutFormData, Product } from './types';
 import { Landing } from './pages/Landing';
 import { FullMenu } from './pages/FullMenu';
@@ -87,6 +88,7 @@ export default function App() {
 
    const handleCheckout = () => {
       window.scrollTo(0, 0);
+      posthog.capture('checkout_started');
       setViewCheckout(true);
    };
 
@@ -100,6 +102,7 @@ export default function App() {
                // Use existing 'orders' bucket instead of non-existent 'payments'
                screenshotUrl = await api.uploadImage(checkoutForm.paymentScreenshot, 'orders');
             } catch (err) {
+               posthog.capture('screenshot_upload_failed', { error: (err as any).message });
                console.error("Failed to upload payment screenshot:", err);
             }
          }
@@ -124,6 +127,7 @@ export default function App() {
          
          return link;
       } catch (error) {
+         posthog.capture('order_submit_failed', { error: (error as any).message });
          console.error("Checkout failed:", error);
          alert("Something went wrong while placing your order. Please try again.");
          throw error;
