@@ -63,6 +63,12 @@ export function Checkout({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        if (!checkoutForm.paymentScreenshot) {
+            alert("Please upload your payment screenshot before confirming your order.");
+            return;
+        }
+
         posthog.capture('order_confirm_clicked');
         try {
             const link = await onSubmit();
@@ -330,14 +336,13 @@ export function Checkout({
 
                                 <div className="bg-white rounded-3xl p-6 shadow-sm border border-cocoa/5">
                                     <span className="block text-sm font-medium text-cocoa mb-3 pl-1">Payment Screenshot (Required)</span>
-                                    <label htmlFor="payment-screenshot" className="block w-full bg-cream-dark border-2 border-dashed border-cocoa/10 rounded-2xl px-4 py-6 text-center hover:bg-cream transition-colors cursor-pointer group">
+                                    <label htmlFor="payment-screenshot" className="block w-full bg-cream-dark border-2 border-dashed border-cocoa/10 rounded-2xl px-4 py-6 text-center hover:bg-cream transition-colors cursor-pointer group relative overflow-hidden">
                                         <input
                                             id="payment-screenshot"
-                                            required
                                             type="file"
                                             accept="image/*"
                                             onChange={handleFileChange}
-                                            className="hidden"
+                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                                         />
                                         <div className="flex flex-col items-center gap-2">
                                             {checkoutForm.paymentScreenshot ? (
