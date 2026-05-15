@@ -36,7 +36,7 @@ export function Checkout({
 
     const total = cart.reduce((a, b) => a + (b.price * b.quantity), 0);
     const orderId = useMemo(() => `MC-${Date.now()}`, []);
-    const upiLink = `upi://pay?pa=6304407083@axl&pn=Qudsiya%20khan&tn=PaymentForMiniCrumbs&am=${total.toFixed(2)}&cu=INR&tr=${orderId}`;
+    const upiLink = `upi://pay?pa=6304407083@axl&pn=${encodeURIComponent('Qudsiya Khan')}&tn=${encodeURIComponent('Order ' + orderId)}&am=${total.toFixed(2)}&cu=INR`;
 
     const downloadQR = () => {
         const canvas = qrRef.current?.querySelector('canvas');
@@ -245,11 +245,11 @@ export function Checkout({
 
                                 <div className="flex flex-col items-center gap-6">
                                     <div ref={qrRef} className="p-6 bg-white rounded-3xl border-4 border-cream shadow-inner inline-block">
-                                        <QRCodeCanvas
-                                            value={upiLink}
-                                            size={200}
-                                            level="H"
-                                            includeMargin={false}
+                                        <QRCodeCanvas 
+                                            value={upiLink} 
+                                            size={220}
+                                            level="M"
+                                            includeMargin={true}
                                         />
                                     </div>
 
