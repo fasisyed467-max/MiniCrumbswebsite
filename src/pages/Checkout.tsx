@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import posthog from 'posthog-js';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowRight, Minus, Plus, MapPin, MessageCircle, CreditCard, CheckCircle2, Download, Upload, Image as ImageIcon } from 'lucide-react';
@@ -33,33 +33,19 @@ export function Checkout({
     const [rapidoAgreed, setRapidoAgreed] = useState(false);
     const [waLink, setWaLink] = useState('');
     const qrRef = useRef<HTMLDivElement>(null);
-    const [qrImageDataUrl, setQrImageDataUrl] = useState("");
 
     const total = cart.reduce((a, b) => a + (b.price * b.quantity), 0);
     const orderId = `MC-${Date.now()}`;
     const upiLink = `upi://pay?pa=6304407083@axl&pn=Qudsiya%20khan&tn=PaymentForMiniCrumbs&am=${total.toFixed(2)}&cu=INR&tr=${orderId}`;
 
-    // Capture the QR canvas into a real image whenever it changes
-    useEffect(() => {
-        if (step === 'payment') {
-            const timer = setTimeout(() => {
-                const canvas = qrRef.current?.querySelector('canvas');
-                if (canvas) {
-                    setQrImageDataUrl(canvas.toDataURL("image/png"));
-                }
-            }, 150);
-            return () => clearTimeout(timer);
-        }
-    }, [upiLink, step]);
-
     const downloadQR = () => {
-        if (qrImageDataUrl) {
+        const canvas = qrRef.current?.querySelector('canvas');
+        if (canvas) {
+            const url = canvas.toDataURL("image/png");
             const link = document.createElement('a');
             link.download = `MiniCrumbs-QR-${orderId}.png`;
-            link.href = qrImageDataUrl;
-            document.body.appendChild(link);
+            link.href = url;
             link.click();
-            document.body.removeChild(link);
         }
     };
 
@@ -256,35 +242,19 @@ export function Checkout({
                             <div className="bg-white rounded-[2.5rem] p-8 shadow-xl border border-cocoa/5 text-center">
                                 <h2 className="text-2xl font-serif text-espresso mb-2">Scan & Pay</h2>
                                 <p className="text-cocoa/60 text-sm mb-8">Scan the QR code below to complete your payment of ₹{total}</p>
+
                                 <div className="flex flex-col items-center gap-6">
-                                    <div className="p-6 bg-white rounded-3xl border-4 border-cream shadow-inner inline-block relative overflow-hidden">
-                                        {/* Hidden canvas used for generating the image */}
-                                        <div ref={qrRef} className="absolute opacity-0 pointer-events-none -left-[9999px]">
-                                            <QRCodeCanvas 
-                                                value={upiLink} 
-                                                size={200}
-                                                level="H"
-                                                includeMargin={false}
-                                            />
-                                        </div>
-                                        
-                                        {/* Real img tag for native mobile saving/long-press */}
-                                        {qrImageDataUrl ? (
-                                            <img 
-                                                src={qrImageDataUrl} 
-                                                alt="Payment QR" 
-                                                className="w-[200px] h-[200px] block"
-                                                style={{ WebkitTouchCallout: 'default' }}
-                                            />
-                                        ) : (
-                                            <div className="w-[200px] h-[200px] flex items-center justify-center bg-cream-dark/50 rounded-xl">
-                                                <Loader2 className="animate-spin text-espresso/20" />
-                                            </div>
-                                        )}
+                                    <div ref={qrRef} className="p-6 bg-white rounded-3xl border-4 border-cream shadow-inner inline-block">
+                                        <QRCodeCanvas
+                                            value={upiLink}
+                                            size={200}
+                                            level="H"
+                                            includeMargin={false}
+                                        />
                                     </div>
-                                    
-                                    <div className="flex flex-col gap-3 w-full max-w-xs text-center">
-                                        <button 
+
+                                    <div className="flex flex-col gap-3 w-full max-w-xs">
+                                        <button
                                             onClick={downloadQR}
                                             className="flex items-center justify-center gap-2 py-3 px-6 bg-cream text-espresso rounded-2xl font-bold text-sm hover:bg-cream-dark transition-colors border border-espresso/5"
                                         >
@@ -293,6 +263,7 @@ export function Checkout({
                                         <p className="text-[10px] text-cocoa/40 uppercase tracking-widest font-bold">Ref: {orderId}</p>
                                     </div>
                                 </div>
+
                                 <div className="mt-10 p-4 bg-green-50 border border-green-100 rounded-2xl flex items-start gap-3 text-left">
                                     <CheckCircle2 className="text-green-500 shrink-0 mt-0.5" size={18} />
                                     <div>
