@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import posthog from 'posthog-js';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowRight, Minus, Plus, MapPin, MessageCircle, CreditCard, CheckCircle2, Download, Upload, Image as ImageIcon } from 'lucide-react';
@@ -35,7 +35,7 @@ export function Checkout({
     const qrRef = useRef<HTMLDivElement>(null);
 
     const total = cart.reduce((a, b) => a + (b.price * b.quantity), 0);
-    const orderId = `MC-${Date.now()}`;
+    const orderId = useMemo(() => `MC-${Date.now()}`, []);
     const upiLink = `upi://pay?pa=6304407083@axl&pn=Qudsiya%20khan&tn=PaymentForMiniCrumbs&am=${total.toFixed(2)}&cu=INR&tr=${orderId}`;
 
     const downloadQR = () => {
