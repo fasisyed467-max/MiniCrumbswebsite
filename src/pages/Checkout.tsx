@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import posthog from 'posthog-js';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowRight, Minus, Plus, MapPin, MessageCircle, CreditCard, CheckCircle2, Download, Upload, Image as ImageIcon } from 'lucide-react';
@@ -35,17 +35,23 @@ export function Checkout({
     const qrRef = useRef<HTMLDivElement>(null);
 
     const total = cart.reduce((a, b) => a + (b.price * b.quantity), 0);
-    const orderId = `MC-${Date.now()}`;
+    const orderId = useMemo(() => `MC-${Date.now()}`, []);
     const upiLink = `upi://pay?pa=6304407083@axl&pn=Qudsiya%20khan&tn=PaymentForMiniCrumbs&am=${total.toFixed(2)}&cu=INR&tr=${orderId}`;
 
     const downloadQR = () => {
         const canvas = qrRef.current?.querySelector('canvas');
         if (canvas) {
-            const url = canvas.toDataURL("image/png");
-            const link = document.createElement('a');
-            link.download = `MiniCrumbs-QR-${orderId}.png`;
-            link.href = url;
-            link.click();
+            canvas.toBlob((blob) => {
+                if (!blob) return;
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `MiniCrumbs-QR-${orderId}.png`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                setTimeout(() => URL.revokeObjectURL(url), 100);
+            }, 'image/png');
         }
     };
 
