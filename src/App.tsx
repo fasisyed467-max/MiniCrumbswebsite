@@ -115,8 +115,8 @@ export default function App() {
          let screenshotUrl = "";
          if (checkoutForm.paymentScreenshot) {
             try {
-               // Use existing 'orders' bucket instead of non-existent 'payments'
                screenshotUrl = await api.uploadImage(checkoutForm.paymentScreenshot, 'orders');
+               posthog.capture('screenshot_upload_success', { url: screenshotUrl });
             } catch (err) {
                posthog.capture('screenshot_upload_failed', { error: (err as any).message });
                console.error("Failed to upload payment screenshot:", err);
@@ -126,9 +126,16 @@ export default function App() {
          const finalForm = { ...checkoutForm, paymentScreenshotUrl: screenshotUrl };
 
          // Submit to Backend
-         await api.submitOrder(cart, finalForm);
+         try {
+            await api.submitOrder(cart, finalForm);
+            posthog.capture('order_db_submit_success');
+         } catch (dbErr) {
+            posthog.capture('order_db_submit_failed', { error: (dbErr as any).message });
+            throw dbErr;
+         }
          
          const link = createWaLink(cart, finalForm);
+         posthog.capture('order_completed', { hasScreenshot: !!screenshotUrl });
          
          setCart([]);
          // Keep viewCheckout true so the user sees the success screen
