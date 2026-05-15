@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef } from 'react';
 import posthog from 'posthog-js';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowRight, Minus, Plus, MapPin, MessageCircle, CreditCard, CheckCircle2, Download, Upload, Image as ImageIcon } from 'lucide-react';
@@ -33,25 +33,32 @@ export function Checkout({
     const [rapidoAgreed, setRapidoAgreed] = useState(false);
     const [waLink, setWaLink] = useState('');
     const qrRef = useRef<HTMLDivElement>(null);
+    
+    // Step 1 & 2: Detect Instagram and add state
+    const isInstagramBrowser = /Instagram/i.test(navigator.userAgent);
+    const [showInstagramSavePrompt, setShowInstagramSavePrompt] = useState(false);
+    const [qrImageUrl, setQrImageUrl] = useState("");
 
     const total = cart.reduce((a, b) => a + (b.price * b.quantity), 0);
-    const orderId = useMemo(() => `MC-${Date.now()}`, []);
+    const orderId = `MC-${Date.now()}`;
     const upiLink = `upi://pay?pa=6304407083@axl&pn=Qudsiya%20khan&tn=PaymentForMiniCrumbs&am=${total.toFixed(2)}&cu=INR&tr=${orderId}`;
 
+    // Step 3: Wrap existing download handler
     const downloadQR = () => {
         const canvas = qrRef.current?.querySelector('canvas');
         if (canvas) {
-            canvas.toBlob((blob) => {
-                if (!blob) return;
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `MiniCrumbs-QR-${orderId}.png`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                setTimeout(() => URL.revokeObjectURL(url), 100);
-            }, 'image/png');
+            const url = canvas.toDataURL("image/png");
+            
+            if (isInstagramBrowser) {
+                setQrImageUrl(url);
+                setShowInstagramSavePrompt(true);
+                return;
+            }
+
+            const link = document.createElement('a');
+            link.download = `MiniCrumbs-QR-${orderId}.png`;
+            link.href = url;
+            link.click();
         }
     };
 
@@ -267,6 +274,26 @@ export function Checkout({
                                             <Download size={18} /> Download QR Code
                                         </button>
                                         <p className="text-[10px] text-cocoa/40 uppercase tracking-widest font-bold">Ref: {orderId}</p>
+
+                                        {/* Step 4: Instagram save prompt UI */}
+                                        {showInstagramSavePrompt && (
+                                            <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-2xl text-center animate-in fade-in slide-in-from-top-4 duration-300">
+                                                <img
+                                                    src={qrImageUrl}
+                                                    alt="Your QR Code"
+                                                    className="mx-auto mb-3 w-48 h-48 object-contain bg-white p-2 rounded-xl shadow-sm"
+                                                />
+                                                <p className="text-sm text-yellow-800 font-medium">
+                                                    📱 Press and hold the image above, then tap <strong>"Save to Photos"</strong> to download your QR code.
+                                                </p>
+                                                <button
+                                                    onClick={() => setShowInstagramSavePrompt(false)}
+                                                    className="mt-3 text-xs text-yellow-600 underline font-semibold"
+                                                >
+                                                    Dismiss
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
