@@ -209,34 +209,26 @@ export const api = {
 
   async uploadImage(file: File, bucket: string): Promise<string> {
     try {
-      // Production-grade client-side compression
-      const options = {
-        maxSizeMB: 0.8, // Max size 800KB
-        maxWidthOrHeight: 1920,
-        useWebWorker: false, // Disabled for better compatibility with in-app browsers
-        initialQuality: 0.7
-      };
-      
-      const compressedFile = await imageCompression(file, options);
-      
-      // Use original file extension as compressed blobs might not have a name
       const fileExt = file.name.split('.').pop() || 'png';
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
       const filePath = `${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from(bucket || 'orders')
-        .upload(filePath, compressedFile);
+        .upload(filePath, file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Supabase Upload Error:', uploadError);
+        throw new Error(`Upload failed: ${uploadError.message}`);
+      }
 
       const { data: { publicUrl } } = supabase.storage
-        .from(bucket)
+        .from(bucket || 'orders')
         .getPublicUrl(filePath);
 
       return publicUrl;
     } catch (error) {
-      console.error('Image optimization/upload failed:', error);
+      console.error('Image upload failed:', error);
       throw error;
     }
   },
