@@ -50,8 +50,16 @@ export function Checkout({
             const url = canvas.toDataURL("image/png");
             
             if (isInstagramBrowser) {
-                setQrImageUrl(url);
-                setShowInstagramSavePrompt(true);
+                // Try using Blob URL for better long-press support in IABs
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        const blobUrl = URL.createObjectURL(blob);
+                        setQrImageUrl(blobUrl);
+                    } else {
+                        setQrImageUrl(url);
+                    }
+                    setShowInstagramSavePrompt(true);
+                }, 'image/png');
                 return;
             }
 
@@ -277,18 +285,26 @@ export function Checkout({
 
                                         {/* Step 4: Instagram save prompt UI */}
                                         {showInstagramSavePrompt && (
-                                            <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-2xl text-center animate-in fade-in slide-in-from-top-4 duration-300">
+                                            <div className="mt-4 p-5 bg-yellow-50 border border-yellow-200 rounded-[2rem] text-center shadow-sm">
                                                 <img
                                                     src={qrImageUrl}
                                                     alt="Your QR Code"
-                                                    className="mx-auto mb-3 w-48 h-48 object-contain bg-white p-2 rounded-xl shadow-sm"
+                                                    className="mx-auto mb-4 w-56 h-56 object-contain bg-white p-4 rounded-3xl shadow-md border-2 border-yellow-100/50"
+                                                    style={{ 
+                                                        WebkitTouchCallout: 'default',
+                                                        WebkitUserSelect: 'auto',
+                                                        userSelect: 'auto',
+                                                        touchAction: 'auto'
+                                                    }}
+                                                    draggable="true"
                                                 />
-                                                <p className="text-sm text-yellow-800 font-medium">
+                                                <p className="text-sm text-yellow-900 font-bold mb-1">Save to Photos</p>
+                                                <p className="text-xs text-yellow-800/80 leading-relaxed px-2">
                                                     📱 Press and hold the image above, then tap <strong>"Save to Photos"</strong> to download your QR code.
                                                 </p>
                                                 <button
                                                     onClick={() => setShowInstagramSavePrompt(false)}
-                                                    className="mt-3 text-xs text-yellow-600 underline font-semibold"
+                                                    className="mt-4 text-xs text-yellow-600 underline font-bold uppercase tracking-widest"
                                                 >
                                                     Dismiss
                                                 </button>
