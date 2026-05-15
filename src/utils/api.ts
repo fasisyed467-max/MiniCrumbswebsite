@@ -1,8 +1,18 @@
+import imageCompression from 'browser-image-compression';
 import { CartItem, CheckoutFormData, Product } from '../types';
 import { supabase } from './supabase';
 
+let productsCache: Product[] | null = null;
+let lastFetch = 0;
+const CACHE_TTL = 30000; // 30 seconds
+
 export const api = {
-  async fetchProducts(): Promise<Product[]> {
+  async fetchProducts(force = false): Promise<Product[]> {
+    const now = Date.now();
+    if (!force && productsCache && (now - lastFetch < CACHE_TTL)) {
+      return productsCache;
+    }
+
     try {
       const { data, error } = await supabase
         .from('products')
@@ -11,8 +21,7 @@ export const api = {
 
       if (error) throw error;
       
-      // Ensure prices are correctly parsed if they come as JSONB
-      return (data || []).map(p => ({
+      const products = (data || []).map(p => ({
         ...p,
         desc: p.description,
         image: p.image_url,
@@ -21,9 +30,13 @@ export const api = {
         prices: typeof p.prices === 'string' ? JSON.parse(p.prices) : p.prices,
         stock: typeof p.stock === 'string' ? JSON.parse(p.stock) : (p.stock || {})
       })) as Product[];
+
+      productsCache = products;
+      lastFetch = now;
+      return products;
     } catch (error) {
       console.error('Error fetching products:', error);
-      return [];
+      return productsCache || [];
     }
   },
 
@@ -195,21 +208,36 @@ export const api = {
   },
 
   async uploadImage(file: File, bucket: string): Promise<string> {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random()}.${fileExt}`;
-    const filePath = `${fileName}`;
+    try {
+      // Production-grade client-side compression
+      const options = {
+        maxSizeMB: 0.8, // Max size 800KB
+        maxWidthOrHeight: 1920,
+        useWebWorker: true,
+        initialQuality: 0.8
+      };
+      
+      const compressedFile = await imageCompression(file, options);
+      
+      const fileExt = compressedFile.name.split('.').pop() || 'png';
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `${fileName}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from(bucket)
-      .upload(filePath, file);
+      const { error: uploadError } = await supabase.storage
+        .from(bucket)
+        .upload(filePath, compressedFile);
 
-    if (uploadError) throw uploadError;
+      if (uploadError) throw uploadError;
 
-    const { data: { publicUrl } } = supabase.storage
-      .from(bucket)
-      .getPublicUrl(filePath);
+      const { data: { publicUrl } } = supabase.storage
+        .from(bucket)
+        .getPublicUrl(filePath);
 
-    return publicUrl;
+      return publicUrl;
+    } catch (error) {
+      console.error('Image optimization/upload failed:', error);
+      throw error;
+    }
   },
 
   async getSystemMetrics() {

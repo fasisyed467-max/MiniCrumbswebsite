@@ -1,9 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import posthog from 'posthog-js';
 import { Size, CartItem, CheckoutFormData, Product } from './types';
-import { Landing } from './pages/Landing';
-import { FullMenu } from './pages/FullMenu';
-import { Checkout } from './pages/Checkout';
 import { SizeSelector } from './components/menu/SizeSelector';
 import { StickyCartBanner } from './components/shared/StickyCartBanner';
 import { CustomCakeModal } from './components/shared/CustomCakeModal';
@@ -11,10 +8,25 @@ import { createWaLink } from './utils/whatsapp';
 import { api } from './utils/api';
 import { PRODUCTS as FALLBACK_PRODUCTS } from './data/constants';
 import { Loader2 } from 'lucide-react';
-import { AdminDashboard } from './pages/AdminDashboard';
-import { Login } from './pages/Login';
 import { supabase } from './utils/supabase';
 import { Session } from '@supabase/supabase-js';
+
+// Lazy load components
+const Landing = lazy(() => import('./pages/Landing').then(m => ({ default: m.Landing })));
+const FullMenu = lazy(() => import('./pages/FullMenu').then(m => ({ default: m.FullMenu })));
+const Checkout = lazy(() => import('./pages/Checkout').then(m => ({ default: m.Checkout })));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
+const Login = lazy(() => import('./pages/Login').then(m => ({ default: m.Login })));
+
+const LoadingSpinner = () => (
+   <div className="fixed inset-0 z-[200] bg-cream flex flex-col items-center justify-center gap-4">
+      <div className="relative">
+         <div className="w-16 h-16 border-4 border-cocoa/10 border-t-cocoa rounded-full animate-spin"></div>
+         <Loader2 className="absolute inset-0 m-auto text-cocoa animate-pulse" size={24} />
+      </div>
+      <p className="font-serif text-xl text-espresso animate-pulse">Loading Mini Crumbs...</p>
+   </div>
+);
 
 export default function App() {
    const [scrolled, setScrolled] = useState(false);
@@ -56,13 +68,17 @@ export default function App() {
          setSession(session);
       });
 
-      loadProducts();
+      // Only load products if we haven't already or if we're coming back from admin
+      if (products === FALLBACK_PRODUCTS) {
+         loadProducts();
+      }
 
       return () => subscription.unsubscribe();
    }, []);
 
    useEffect(() => {
-      if (!viewAdmin) {
+      // Refresh products when returning from admin to ensure we have latest stock/prices
+      if (!viewAdmin && products !== FALLBACK_PRODUCTS) {
          loadProducts();
       }
    }, [viewAdmin]);
@@ -197,60 +213,62 @@ export default function App() {
             </div>
          )}
 
-         {/* Main Routing Logic */}
-         {!viewFullMenu && !viewCheckout && !viewAdmin && (
-            <Landing 
-               products={products}
-               scrolled={scrolled}
-               cart={cart}
-               onOrder={handleOrder}
-               onOpenSizeSelector={openSizeSelector}
-               updateCartQuantity={updateCartQuantity}
-               onViewFullMenu={handleOrder}
-            />
-         )}
+         <Suspense fallback={<LoadingSpinner />}>
+            {/* Main Routing Logic */}
+            {!viewFullMenu && !viewCheckout && !viewAdmin && (
+               <Landing 
+                  products={products}
+                  scrolled={scrolled}
+                  cart={cart}
+                  onOrder={handleOrder}
+                  onOpenSizeSelector={openSizeSelector}
+                  updateCartQuantity={updateCartQuantity}
+                  onViewFullMenu={handleOrder}
+               />
+            )}
 
-         {viewFullMenu && !viewCheckout && !viewAdmin && (
-            <FullMenu 
-               products={products}
-               cart={cart}
-               onOpenSizeSelector={openSizeSelector}
-               updateCartQuantity={updateCartQuantity}
-               onBack={() => setViewFullMenu(false)}
-               onCheckout={handleCheckout}
-            />
-         )}
+            {viewFullMenu && !viewCheckout && !viewAdmin && (
+               <FullMenu 
+                  products={products}
+                  cart={cart}
+                  onOpenSizeSelector={openSizeSelector}
+                  updateCartQuantity={updateCartQuantity}
+                  onBack={() => setViewFullMenu(false)}
+                  onCheckout={handleCheckout}
+               />
+            )}
 
-         {viewCheckout && !viewAdmin && (
-            <Checkout 
-               products={products}
-               cart={cart}
-               checkoutForm={checkoutForm}
-               setCheckoutForm={setCheckoutForm}
-               updateCartQuantity={updateCartQuantity}
-               onBack={() => setViewCheckout(false)}
-               onSubmit={handleWhatsAppCheckout}
-               isSubmitting={isSubmitting}
-            />
-         )}
+            {viewCheckout && !viewAdmin && (
+               <Checkout 
+                  products={products}
+                  cart={cart}
+                  checkoutForm={checkoutForm}
+                  setCheckoutForm={setCheckoutForm}
+                  updateCartQuantity={updateCartQuantity}
+                  onBack={() => setViewCheckout(false)}
+                  onSubmit={handleWhatsAppCheckout}
+                  isSubmitting={isSubmitting}
+               />
+            )}
 
-         {viewAdmin && (
-            !session ? (
-               <Login 
-                  onLogin={() => setViewAdmin(true)} 
-                  onBack={() => {
+            {viewAdmin && (
+               !session ? (
+                  <Login 
+                     onLogin={() => setViewAdmin(true)} 
+                     onBack={() => {
+                        setViewAdmin(false);
+                        window.history.pushState({}, '', '/');
+                     }} 
+                  />
+               ) : (
+                  <AdminDashboard onBack={async () => {
+                     await supabase.auth.signOut();
                      setViewAdmin(false);
                      window.history.pushState({}, '', '/');
-                  }} 
-               />
-            ) : (
-               <AdminDashboard onBack={async () => {
-                  await supabase.auth.signOut();
-                  setViewAdmin(false);
-                  window.history.pushState({}, '', '/');
-               }} />
-            )
-         )}
+                  }} />
+               )
+            )}
+         </Suspense>
 
          {/* Shared Modals & Overlays */}
          <SizeSelector 

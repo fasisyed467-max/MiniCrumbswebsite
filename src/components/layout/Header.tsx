@@ -11,7 +11,7 @@ export function Header({ scrolled, onOrder }: HeaderProps) {
         <header className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'bg-cream/90 backdrop-blur-md shadow-sm py-4' : 'bg-transparent py-6'}`}>
            <div className="max-w-7xl mx-auto px-6 lg:px-12 flex justify-between items-center">
               <div className="flex items-center gap-3">
-                 <img src="/logo.jpg" alt="Mini Crumbs Logo" className="h-10 w-10 md:h-12 md:w-12 rounded-full object-cover shadow-md border border-white/40" />
+                 <img src="/logo.jpg" alt="Mini Crumbs Logo" className="h-10 w-10 md:h-12 md:w-12 rounded-full object-cover shadow-md border border-white/40" decoding="async" />
                  <span className={`font-serif text-2xl font-semibold tracking-tight ${scrolled ? 'text-espresso' : 'text-espresso'} transition-colors`}>
                     Mini Crumbs
                  </span>

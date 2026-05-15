@@ -26,9 +26,9 @@ export function Hero({ onOrder }: HeroProps) {
                     {/* Main Image */}
                     <div className="relative w-full h-full rounded-full overflow-hidden shadow-2xl ring-4 ring-cream bg-cream-dark z-10">
                        <img
-                          src="/Raw choclatecale.png"
+                          src="/Raw choclatecale.png" fetchPriority="high"
                           alt="Hero Cake"
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover" decoding="async"
                        />
                     </div>
 
@@ -80,7 +80,7 @@ export function Hero({ onOrder }: HeroProps) {
                     <div className="flex -space-x-2">
                        {[1, 2, 3, 4].map(i => (
                           <div key={i} className="w-10 h-10 rounded-full border-2 border-cream bg-cream-dark flex items-center justify-center overflow-hidden">
-                             <img src={`https://i.pravatar.cc/100?img=${i + 10}`} alt="Customer" className="w-full h-full object-cover" />
+                             <img src={`https://i.pravatar.cc/100?img=${i + 10}`} alt="Customer" className="w-full h-full object-cover" decoding="async" />
                           </div>
                        ))}
                     </div>
@@ -110,7 +110,7 @@ export function Hero({ onOrder }: HeroProps) {
                     {/* Main Image */}
                     <div className="relative w-full h-full rounded-full overflow-hidden shadow-2xl ring-8 ring-cream bg-cream-dark z-10">
                        <img
-                          src="/Raw choclatecale.png"
+                          src="/Raw choclatecale.png" fetchPriority="high"
                           alt="Hero Cake"
                           className="w-full h-full object-cover hover:scale-110 transition-transform duration-700"
                        />

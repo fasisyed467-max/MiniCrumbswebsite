@@ -57,8 +57,13 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
 
     fetchMetrics();
     
-    // Auto refresh every 30 seconds
-    const interval = setInterval(fetchMetrics, 30000);
+    // Auto refresh every 30 seconds, but only if the tab is visible
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchMetrics();
+      }
+    }, 30000);
+
     return () => clearInterval(interval);
   }, [dateRange, customRange]);
 
@@ -66,7 +71,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
     setIsStatsLoading(true);
     try {
       const [products, standardOrders, customOrders] = await Promise.all([
-        api.fetchProducts(),
+        api.fetchProducts(true),
         api.fetchOrders(),
         api.fetchCustomOrders()
       ]);

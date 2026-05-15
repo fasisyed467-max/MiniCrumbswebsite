@@ -16,10 +16,10 @@ export function Footer({ onOrder }: FooterProps) {
               <div className="max-w-7xl mx-auto px-6 lg:px-12 grid lg:grid-cols-2 gap-16 items-center relative z-10">
                  <div className="order-2 lg:order-1 relative">
                     <div className="aspect-square rounded-[2rem] overflow-hidden outline outline-8 outline-white shadow-xl shadow-cocoa/5">
-                       <img src="/Matilda Bento Cake.png" alt="Baking process" className="w-full h-full object-cover" />
+                       <img src="/Matilda Bento Cake.png" alt="Baking process" className="w-full h-full object-cover" loading="lazy" decoding="async" />
                     </div>
                     <div className="absolute -bottom-8 -right-8 w-48 aspect-square rounded-full overflow-hidden outline outline-8 outline-white shadow-xl shadow-cocoa/5 hidden md:block">
-                       <img src="/Basque cheesecake.png" alt="Detail shot" className="w-full h-full object-cover" />
+                       <img src="/Basque cheesecake.png" alt="Detail shot" className="w-full h-full object-cover" loading="lazy" decoding="async" />
                     </div>
                  </div>
 
@@ -51,7 +51,7 @@ export function Footer({ onOrder }: FooterProps) {
               <div className="max-w-7xl mx-auto grid md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
                  <div className="lg:col-span-2">
                     <div className="flex items-center gap-4 mb-6">
-                       <img src="/logo.jpg" alt="Mini Crumbs Logo" className="h-12 w-12 rounded-full object-cover border-2 border-white/20 shadow-md" />
+                       <img src="/logo.jpg" alt="Mini Crumbs Logo" className="h-12 w-12 rounded-full object-cover border-2 border-white/20 shadow-md" loading="lazy" decoding="async" />
                        <h2 className="font-serif text-3xl text-white">Mini Crumbs</h2>
                     </div>
                     <p className="text-cream/60 max-w-sm mb-8 font-light leading-relaxed">
