@@ -57,7 +57,7 @@ export function Checkout({
                 alert("File is too large. Please select an image smaller than 10MB.");
                 return;
             }
-            setCheckoutForm({ ...checkoutForm, paymentScreenshot: file });
+            setCheckoutForm(prev => ({ ...prev, paymentScreenshot: file }));
         }
     };
 
@@ -314,7 +314,7 @@ export function Checkout({
                                             maxLength={10}
                                             title="Please enter a valid 10-digit phone number"
                                             value={checkoutForm.phone}
-                                            onChange={e => setCheckoutForm({ ...checkoutForm, phone: e.target.value })}
+                                            onChange={e => setCheckoutForm(prev => ({ ...prev, phone: e.target.value }))}
                                             className="w-full bg-cream-dark border-transparent rounded-2xl px-4 py-3 outline-none focus:border-cocoa/30 focus:bg-white focus:ring-4 focus:ring-cocoa/5 text-espresso transition-all"
                                             placeholder="10-digit mobile number"
                                         />
@@ -324,25 +324,24 @@ export function Checkout({
                                         <label className="block text-sm font-medium text-cocoa mb-1.5 pl-1">Complete Delivery Address</label>
                                         <div className="relative">
                                             <MapPin size={18} className="absolute left-4 top-3.5 text-cocoa/50" />
-                                            <textarea required rows={3} value={checkoutForm.address} onChange={e => setCheckoutForm({ ...checkoutForm, address: e.target.value })} className="w-full bg-cream-dark border-transparent rounded-2xl pl-11 pr-4 py-3 outline-none focus:border-cocoa/30 focus:bg-white focus:ring-4 focus:ring-cocoa/5 text-espresso transition-all resize-none" placeholder="Flat, House no., Area, Landmark..."></textarea>
+                                            <textarea required rows={3} value={checkoutForm.address} onChange={e => setCheckoutForm(prev => ({ ...prev, address: e.target.value }))} className="w-full bg-cream-dark border-transparent rounded-2xl pl-11 pr-4 py-3 outline-none focus:border-cocoa/30 focus:bg-white focus:ring-4 focus:ring-cocoa/5 text-espresso transition-all resize-none" placeholder="Flat, House no., Area, Landmark..."></textarea>
                                         </div>
                                     </div>
 
                                     <div>
                                         <label className="block text-sm font-medium text-cocoa mb-1.5 pl-1">Any Special Notes?</label>
-                                        <input type="text" value={checkoutForm.notes} onChange={e => setCheckoutForm({ ...checkoutForm, notes: e.target.value })} className="w-full bg-cream-dark border-transparent rounded-2xl px-4 py-3 outline-none focus:border-cocoa/30 focus:bg-white focus:ring-4 focus:ring-cocoa/5 text-espresso transition-all" placeholder="Message on cake, contactless delivery, etc." />
+                                        <input type="text" value={checkoutForm.notes} onChange={e => setCheckoutForm(prev => ({ ...prev, notes: e.target.value }))} className="w-full bg-cream-dark border-transparent rounded-2xl px-4 py-3 outline-none focus:border-cocoa/30 focus:bg-white focus:ring-4 focus:ring-cocoa/5 text-espresso transition-all" placeholder="Message on cake, contactless delivery, etc." />
                                     </div>
                                 </div>
 
                                 <div className="bg-white rounded-3xl p-6 shadow-sm border border-cocoa/5">
                                     <span className="block text-sm font-medium text-cocoa mb-3 pl-1">Payment Screenshot (Required)</span>
-                                    <label htmlFor="payment-screenshot" className="block w-full bg-cream-dark border-2 border-dashed border-cocoa/10 rounded-2xl px-4 py-6 text-center hover:bg-cream transition-colors cursor-pointer group relative overflow-hidden">
+                                    <label className="block w-full bg-cream-dark border-2 border-dashed border-cocoa/10 rounded-2xl px-4 py-6 text-center hover:bg-cream transition-colors cursor-pointer group relative">
                                         <input
-                                            id="payment-screenshot"
                                             type="file"
                                             accept="image/*"
                                             onChange={handleFileChange}
-                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                         />
                                         <div className="flex flex-col items-center gap-2">
                                             {checkoutForm.paymentScreenshot ? (
