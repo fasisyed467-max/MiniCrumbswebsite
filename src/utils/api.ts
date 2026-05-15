@@ -213,18 +213,19 @@ export const api = {
       const options = {
         maxSizeMB: 0.8, // Max size 800KB
         maxWidthOrHeight: 1920,
-        useWebWorker: true,
-        initialQuality: 0.8
+        useWebWorker: false, // Disabled for better compatibility with in-app browsers
+        initialQuality: 0.7
       };
       
       const compressedFile = await imageCompression(file, options);
       
-      const fileExt = compressedFile.name.split('.').pop() || 'png';
-      const fileName = `${Math.random()}.${fileExt}`;
+      // Use original file extension as compressed blobs might not have a name
+      const fileExt = file.name.split('.').pop() || 'png';
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
       const filePath = `${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from(bucket)
+        .from(bucket || 'orders')
         .upload(filePath, compressedFile);
 
       if (uploadError) throw uploadError;
