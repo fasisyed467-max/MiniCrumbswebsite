@@ -209,13 +209,20 @@ export const api = {
 
   async uploadImage(file: File, bucket: string): Promise<string> {
     try {
+      // Convert to ArrayBuffer to prevent Android "Failed to fetch" file path access issues
+      const arrayBuffer = await file.arrayBuffer();
+
       const fileExt = file.name.split('.').pop() || 'png';
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
       const filePath = `${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from(bucket || 'orders')
-        .upload(filePath, file);
+        .upload(filePath, arrayBuffer, {
+          contentType: file.type || 'image/png',
+          cacheControl: '3600',
+          upsert: false
+        });
 
       if (uploadError) {
         console.error('Supabase Upload Error:', uploadError);
