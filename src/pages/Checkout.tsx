@@ -49,7 +49,7 @@ export function Checkout({
         }
     };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
             posthog.capture('screenshot_uploaded', { fileSize: file.size, fileType: file.type });
@@ -57,7 +57,15 @@ export function Checkout({
                 alert("File is too large. Please select an image smaller than 10MB.");
                 return;
             }
-            setCheckoutForm(prev => ({ ...prev, paymentScreenshot: file }));
+            try {
+                // IMMEDIATELY read the file into memory to avoid Android permission revocation later
+                const arrayBuffer = await file.arrayBuffer();
+                const inMemoryFile = new File([arrayBuffer], file.name, { type: file.type });
+                setCheckoutForm(prev => ({ ...prev, paymentScreenshot: inMemoryFile }));
+            } catch (err) {
+                console.error("Failed to read file:", err);
+                alert("Failed to access the image. Please try selecting it again.");
+            }
         }
     };
 
