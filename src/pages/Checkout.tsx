@@ -274,6 +274,7 @@ export function Checkout({
                                         >
                                             <Download size={18} /> Download QR Code
                                         </button>
+                                        <p className="text-[11px] text-cocoa/70 font-medium mt-1">Please screenshot this QR if you are unable to download it</p>
                                         <p className="text-[10px] text-cocoa/40 uppercase tracking-widest font-bold">Ref: {orderId}</p>
                                     </div>
                                 </div>
