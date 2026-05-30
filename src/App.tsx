@@ -102,10 +102,63 @@ export default function App() {
       setViewFullMenu(true);
    };
 
-   const handleCheckout = () => {
-      window.scrollTo(0, 0);
-      posthog.capture('checkout_started');
-      setViewCheckout(true);
+   const checkCartStock = async (): Promise<{ isValid: boolean; errors?: string[] }> => {
+      try {
+         const liveProducts = await api.fetchProducts(true);
+         if (!liveProducts || liveProducts.length === 0) {
+            return { isValid: true };
+         }
+
+         const updatedCart: CartItem[] = [];
+         const errors: string[] = [];
+         let cartChanged = false;
+
+         for (const item of cart) {
+            const product = liveProducts.find(p => p.id === item.productId);
+            if (!product) {
+               errors.push(`- ${item.name} is no longer available.`);
+               cartChanged = true;
+               continue;
+            }
+            const variantStock = product.stock?.[item.size] || 0;
+            if (variantStock <= 0) {
+               errors.push(`- ${item.name} (${item.size}) is out of stock.`);
+               cartChanged = true;
+            } else if (item.quantity > variantStock) {
+               errors.push(`- Only ${variantStock} units of ${item.name} (${item.size}) are available (you had ${item.quantity}).`);
+               updatedCart.push({ ...item, quantity: variantStock });
+               cartChanged = true;
+            } else {
+               updatedCart.push(item);
+            }
+         }
+
+         if (cartChanged) {
+            setCart(updatedCart);
+            setProducts(liveProducts);
+            return { isValid: false, errors };
+         }
+
+         setProducts(liveProducts);
+         return { isValid: true };
+      } catch (err) {
+         console.error("Failed to check stock:", err);
+         return { isValid: true };
+      }
+   };
+
+   const handleCheckout = async () => {
+      setIsLoading(true);
+      const res = await checkCartStock();
+      setIsLoading(false);
+      
+      if (res.isValid) {
+         window.scrollTo(0, 0);
+         posthog.capture('checkout_started');
+         setViewCheckout(true);
+      } else {
+         alert(`Some items in your cart are no longer available in the requested quantity:\n\n${res.errors?.join('\n')}\n\nYour cart has been automatically updated.`);
+      }
    };
 
    const handleWhatsAppCheckout = async (): Promise<string | undefined> => {
@@ -255,6 +308,7 @@ export default function App() {
                   onBack={() => setViewCheckout(false)}
                   onSubmit={handleWhatsAppCheckout}
                   isSubmitting={isSubmitting}
+                  checkCartStock={checkCartStock}
                />
             )}
 

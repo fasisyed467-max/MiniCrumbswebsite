@@ -15,6 +15,7 @@ interface CheckoutProps {
     onBack: () => void;
     onSubmit: () => Promise<string | undefined>;
     isSubmitting: boolean;
+    checkCartStock: () => Promise<{ isValid: boolean; errors?: string[] }>;
 }
 
 type CheckoutStep = 'summary' | 'shipping' | 'payment' | 'details' | 'success';
@@ -27,9 +28,11 @@ export function Checkout({
     updateCartQuantity,
     onBack,
     onSubmit,
-    isSubmitting
+    isSubmitting,
+    checkCartStock
 }: CheckoutProps) {
     const [step, setStep] = useState<CheckoutStep>('summary');
+    const [isCheckingStock, setIsCheckingStock] = useState(false);
     const [rapidoAgreed, setRapidoAgreed] = useState(false);
     const [waLink, setWaLink] = useState('');
     const qrRef = useRef<HTMLDivElement>(null);
@@ -187,10 +190,24 @@ export function Checkout({
                             </div>
 
                             <button
-                                onClick={() => setStep('shipping')}
-                                className="w-full bg-espresso text-cream font-bold py-5 rounded-3xl shadow-xl flex justify-center gap-3 items-center active:scale-95 transition-transform"
+                                disabled={isCheckingStock}
+                                onClick={async () => {
+                                    setIsCheckingStock(true);
+                                    const res = await checkCartStock();
+                                    setIsCheckingStock(false);
+                                    if (res.isValid) {
+                                        setStep('shipping');
+                                    } else {
+                                        alert(`Some items in your cart are no longer available in the requested quantity:\n\n${res.errors?.join('\n')}\n\nYour cart has been automatically updated.`);
+                                    }
+                                }}
+                                className="w-full bg-espresso text-cream font-bold py-5 rounded-3xl shadow-xl flex justify-center gap-3 items-center active:scale-95 transition-transform disabled:opacity-50"
                             >
-                                Proceed to Shipping <ArrowRight size={20} />
+                                {isCheckingStock ? (
+                                    <>Verifying Stock... <Loader2 className="animate-spin" size={20} /></>
+                                ) : (
+                                    <>Proceed to Shipping <ArrowRight size={20} /></>
+                                )}
                             </button>
                         </motion.div>
                     )}
@@ -235,11 +252,25 @@ export function Checkout({
                             </div>
 
                             <button
-                                disabled={!rapidoAgreed}
-                                onClick={() => setStep('payment')}
+                                disabled={!rapidoAgreed || isCheckingStock}
+                                onClick={async () => {
+                                    setIsCheckingStock(true);
+                                    const res = await checkCartStock();
+                                    setIsCheckingStock(false);
+                                    if (res.isValid) {
+                                        setStep('payment');
+                                    } else {
+                                        alert(`Some items in your cart are no longer available in the requested quantity:\n\n${res.errors?.join('\n')}\n\nYour cart has been automatically updated.`);
+                                        setStep('summary');
+                                    }
+                                }}
                                 className="w-full bg-espresso text-cream font-bold py-4 sm:py-5 rounded-2xl sm:rounded-3xl shadow-xl flex justify-center gap-3 items-center active:scale-95 transition-transform disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed"
                             >
-                                Continue to Payment <ArrowRight size={20} />
+                                {isCheckingStock ? (
+                                    <>Verifying Stock... <Loader2 className="animate-spin" size={20} /></>
+                                ) : (
+                                    <>Continue to Payment <ArrowRight size={20} /></>
+                                )}
                             </button>
                             <p className="text-center text-[9px] sm:text-[10px] text-cocoa/40 uppercase tracking-widest font-bold">Please agree to the shipping terms to proceed</p>
                         </motion.div>
