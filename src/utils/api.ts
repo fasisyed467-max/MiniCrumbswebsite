@@ -2,6 +2,9 @@ import imageCompression from 'browser-image-compression';
 import { CartItem, CheckoutFormData, Product } from '../types';
 import { supabase } from './supabase';
 
+const CF_WORKER_URL = "https://mini-crumbs-image-proxy.minicrumbs.workers.dev"; // fill after deploy
+const SUPABASE_STORAGE_BASE = "https://hjldktzxzeaxqvoxoesc.supabase.co";
+
 let productsCache: Product[] | null = null;
 let lastFetch = 0;
 const CACHE_TTL = 30000; // 30 seconds
@@ -20,11 +23,11 @@ export const api = {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
+
       const products = (data || []).map(p => ({
         ...p,
         desc: p.description,
-        image: p.image_url,
+        image: p.image_url?.replace(SUPABASE_STORAGE_BASE, CF_WORKER_URL) ?? p.image,
         popular: p.is_popular,
         price: parseFloat(p.price),
         prices: typeof p.prices === 'string' ? JSON.parse(p.prices) : p.prices,
@@ -75,7 +78,7 @@ export const api = {
   async submitOrder(cart: CartItem[], formData: CheckoutFormData) {
     try {
       const totalAmount = cart.reduce((a, b) => a + (b.price * b.quantity), 0);
-      
+
       const { error } = await supabase.rpc('place_order_with_stock', {
         p_customer_name: formData.name,
         p_customer_phone: formData.phone,
@@ -135,7 +138,7 @@ export const api = {
 
       const prices: Record<string, number> = {};
       const stock: Record<string, number> = {};
-      
+
       product.variants.forEach((v: any) => {
         if (v.size) {
           if (v.price) prices[v.size] = parseFloat(v.price);
@@ -209,17 +212,25 @@ export const api = {
 
   async uploadImage(file: File, bucket: string): Promise<string> {
     try {
-      // Convert to ArrayBuffer to prevent Android "Failed to fetch" file path access issues
-      const arrayBuffer = await file.arrayBuffer();
+      const options = {
+        maxSizeMB: 0.3,
+        maxWidthOrHeight: 1200,
+        useWebWorker: true,
+      };
 
-      const fileExt = file.name.split('.').pop() || 'png';
+      const compressedFile = await imageCompression(file, options);
+
+      // Convert to ArrayBuffer to prevent Android "Failed to fetch" file path access issues
+      const arrayBuffer = await compressedFile.arrayBuffer();
+
+      const fileExt = compressedFile.name.split('.').pop() || 'png';
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
       const filePath = `${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from(bucket || 'orders')
         .upload(filePath, arrayBuffer, {
-          contentType: file.type || 'image/png',
+          contentType: compressedFile.type || 'image/png',
           cacheControl: '3600',
           upsert: false
         });
