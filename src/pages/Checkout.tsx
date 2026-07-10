@@ -34,6 +34,7 @@ export function Checkout({
     const [step, setStep] = useState<CheckoutStep>('summary');
     const [isCheckingStock, setIsCheckingStock] = useState(false);
     const [rapidoAgreed, setRapidoAgreed] = useState(false);
+    const [deliveryTimeAgreed, setDeliveryTimeAgreed] = useState(false);
     const [waLink, setWaLink] = useState('');
     const qrRef = useRef<HTMLDivElement>(null);
 
@@ -238,6 +239,30 @@ export function Checkout({
                                     </p>
                                 </div>
 
+                                {/* Delivery Time Note */}
+                                <div className="p-4 sm:p-6 bg-rose-50/60 rounded-2xl sm:rounded-3xl border border-rose-200 text-left mb-3">
+                                    <p className="text-xs sm:text-sm font-bold text-rose-900 mb-1.5 sm:mb-2 flex items-center gap-2">
+                                        <span className="w-2 h-2 bg-rose-500 rounded-full animate-pulse"></span>
+                                        Delivery Time Window
+                                    </p>
+                                    <p className="text-xs sm:text-sm text-rose-800/80 leading-relaxed">
+                                        All orders are shipped and delivered between
+                                        <span className="font-bold text-rose-900"> 6:00 PM – 8:00 PM only</span>. Please ensure someone is available to receive the order during this window.
+                                    </p>
+                                </div>
+
+                                <label className="flex items-center gap-3 sm:gap-4 p-4 sm:p-5 bg-rose-50 rounded-xl sm:rounded-2xl border border-rose-200 cursor-pointer group hover:bg-rose-100/60 transition-colors mb-4">
+                                    <input
+                                        type="checkbox"
+                                        checked={deliveryTimeAgreed}
+                                        onChange={(e) => setDeliveryTimeAgreed(e.target.checked)}
+                                        className="w-5 h-5 sm:w-6 sm:h-6 rounded-lg accent-rose-600 cursor-pointer shrink-0"
+                                    />
+                                    <span className="text-xs sm:text-sm font-medium text-rose-900 text-left leading-snug">
+                                        I understand my order will be shipped between <strong>6 PM – 8 PM</strong> only.
+                                    </span>
+                                </label>
+
                                 <label className="flex items-center gap-3 sm:gap-4 p-4 sm:p-5 bg-cream rounded-xl sm:rounded-2xl border border-espresso/5 cursor-pointer group hover:bg-cream-dark transition-colors">
                                     <input
                                         type="checkbox"
@@ -252,7 +277,7 @@ export function Checkout({
                             </div>
 
                             <button
-                                disabled={!rapidoAgreed || isCheckingStock}
+                                disabled={!rapidoAgreed || !deliveryTimeAgreed || isCheckingStock}
                                 onClick={async () => {
                                     setIsCheckingStock(true);
                                     const res = await checkCartStock();
