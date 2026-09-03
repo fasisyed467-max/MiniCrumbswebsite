@@ -7,11 +7,10 @@
 // a local path, a placeholder, or already-proxied.
 
 const SUPABASE_STORAGE_BASE = 'https://hjldktzxzeaxqvoxoesc.supabase.co';
-// The Vercel Edge Function at `api/img/[...path].ts` is not yet resolving on the
-// deployment (returns 404), so images are temporarily routed back through the
-// existing Cloudflare Worker. Switch this to '/api/img' once the function is
-// confirmed live (curl -I .../api/img/... -> 200).
-const PROXY_BASE = 'https://mini-crumbs-image-proxy.minicrumbs.workers.dev';
+// Vercel Function `api/img.ts` (routed via the /api/img/:path* rewrite in
+// vercel.json). Verified live: returns the image with a 30-day immutable
+// Cache-Control and X-Vercel-Cache: HIT on repeat requests.
+const PROXY_BASE = '/api/img';
 
 // Keep in sync with ALLOWED_PREFIX(ES) in api/img/[...path].ts. Currently only
 // the `products` bucket is proxied; `orders` is added in a later change together
