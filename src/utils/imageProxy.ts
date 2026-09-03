@@ -7,7 +7,11 @@
 // a local path, a placeholder, or already-proxied.
 
 const SUPABASE_STORAGE_BASE = 'https://hjldktzxzeaxqvoxoesc.supabase.co';
-const PROXY_BASE = '/api/img';
+// The Vercel Edge Function at `api/img/[...path].ts` is not yet resolving on the
+// deployment (returns 404), so images are temporarily routed back through the
+// existing Cloudflare Worker. Switch this to '/api/img' once the function is
+// confirmed live (curl -I .../api/img/... -> 200).
+const PROXY_BASE = 'https://mini-crumbs-image-proxy.minicrumbs.workers.dev';
 
 // Keep in sync with ALLOWED_PREFIX(ES) in api/img/[...path].ts. Currently only
 // the `products` bucket is proxied; `orders` is added in a later change together
@@ -22,7 +26,8 @@ export function toProxiedImageUrl(
   if (!url.startsWith(SUPABASE_STORAGE_BASE) || !PROXYABLE.test(url)) return url;
 
   const path = url.replace(SUPABASE_STORAGE_BASE, PROXY_BASE);
-  return opts?.absolute && typeof window !== 'undefined'
+  // Only a root-relative proxy path needs an origin prepended for `absolute`.
+  return opts?.absolute && path.startsWith('/') && typeof window !== 'undefined'
     ? `${window.location.origin}${path}`
     : path;
 }
