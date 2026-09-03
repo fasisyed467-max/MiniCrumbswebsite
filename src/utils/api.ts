@@ -1,9 +1,7 @@
 import imageCompression from 'browser-image-compression';
 import { CartItem, CheckoutFormData, Product } from '../types';
 import { supabase } from './supabase';
-
-const CF_WORKER_URL = "https://mini-crumbs-image-proxy.minicrumbs.workers.dev"; // fill after deploy
-const SUPABASE_STORAGE_BASE = "https://hjldktzxzeaxqvoxoesc.supabase.co";
+import { toProxiedImageUrl } from './imageProxy';
 
 let productsCache: Product[] | null = null;
 let lastFetch = 0;
@@ -27,7 +25,7 @@ export const api = {
       const products = (data || []).map(p => ({
         ...p,
         desc: p.description,
-        image: p.image_url?.replace(SUPABASE_STORAGE_BASE, CF_WORKER_URL) ?? p.image,
+        image: toProxiedImageUrl(p.image_url) || p.image,
         popular: p.is_popular,
         price: parseFloat(p.price),
         prices: typeof p.prices === 'string' ? JSON.parse(p.prices) : p.prices,

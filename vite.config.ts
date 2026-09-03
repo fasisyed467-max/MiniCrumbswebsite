@@ -75,6 +75,16 @@ export default defineConfig(({ mode }) => {
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
       allowedHosts: true,
+      // `/api/img/*` is a Vercel Edge Function in production; forward it straight
+      // to Supabase Storage in local dev so product images resolve (no caching
+      // locally, which is fine). Run `vercel dev` to exercise the real function.
+      proxy: {
+        '/api/img': {
+          target: 'https://hjldktzxzeaxqvoxoesc.supabase.co',
+          changeOrigin: true,
+          rewrite: (p) => p.replace(/^\/api\/img/, ''),
+        },
+      },
     },
   };
 });
