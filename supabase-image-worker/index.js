@@ -11,14 +11,16 @@ export default {
 
     const response = await fetch(supabaseUrl, {
       cf: isStaticAsset
-        ? { cacheEverything: true, cacheTtl: 86400 }
+        ? { cacheEverything: true, cacheTtl: 2592000 }
         : { cacheEverything: false }
     });
 
     const newResponse = new Response(response.body, response);
 
     if (isStaticAsset) {
-      newResponse.headers.set("Cache-Control", "public, max-age=86400");
+      // Product images get a fresh random filename on every upload, so a cached
+      // object is never stale — safe to cache at the edge for the full 30 days.
+      newResponse.headers.set("Cache-Control", "public, max-age=2592000, immutable");
     } else {
       newResponse.headers.set("Cache-Control", "no-store");
     }

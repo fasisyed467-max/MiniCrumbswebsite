@@ -212,26 +212,49 @@ export const api = {
 
   async uploadImage(file: File, bucket: string): Promise<string> {
     try {
-      const options = {
-        maxSizeMB: 0.3,
-        maxWidthOrHeight: 1200,
-        useWebWorker: true,
-      };
+      // Only product images change here. They are served to every menu visitor
+      // and cards never render wider than ~400px, so shrinking them is what
+      // cuts storage egress. Payment screenshots and custom-order reference
+      // photos are admin-only, low volume, and must stay legible enough to read
+      // a UPI transaction ID off — so that path is left exactly as it was.
+      const isProductImage = bucket === 'products';
+
+      const options = isProductImage
+        ? {
+            maxSizeMB: 0.3,
+            maxWidthOrHeight: 800,
+            fileType: 'image/webp',
+            useWebWorker: true,
+          }
+        : {
+            maxSizeMB: 0.3,
+            maxWidthOrHeight: 1200,
+            useWebWorker: true,
+          };
 
       const compressedFile = await imageCompression(file, options);
 
       // Convert to ArrayBuffer to prevent Android "Failed to fetch" file path access issues
       const arrayBuffer = await compressedFile.arrayBuffer();
 
-      const fileExt = compressedFile.name.split('.').pop() || 'png';
+      // Products are converted to WebP, so the source filename no longer
+      // describes the bytes and the extension comes from the MIME type instead.
+      const contentType = isProductImage
+        ? compressedFile.type || 'image/webp'
+        : compressedFile.type || 'image/png';
+      const fileExt = isProductImage
+        ? contentType.split('/').pop() || 'webp'
+        : compressedFile.name.split('.').pop() || 'png';
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
       const filePath = `${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from(bucket || 'orders')
         .upload(filePath, arrayBuffer, {
-          contentType: compressedFile.type || 'image/png',
-          cacheControl: '3600',
+          contentType,
+          // Product filenames are unique per upload, so the object never changes
+          // and can be cached for a year instead of re-fetched hourly.
+          cacheControl: isProductImage ? '31536000, immutable' : '3600',
           upsert: false
         });
 

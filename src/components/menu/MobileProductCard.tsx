@@ -24,7 +24,7 @@ export function MobileProductCard({ product, qty, onMinus, onOpenSizeSelector }:
          
          {/* Image - Positioned absolutely to overlap perfectly */}
          <div className="w-40 h-40 rounded-full overflow-hidden shadow-xl flex-shrink-0 relative border-4 border-white bg-cream-dark z-20 ml-0">
-            <img src={product.image} className="w-full h-full object-cover" alt={product.name} />
+            <img src={product.image} className="w-full h-full object-cover" alt={product.name} loading="lazy" />
             {product.popular && (
                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-white/95 px-2.5 py-0.5 rounded-full flex items-center shadow-md">
                   <Star size={10} className="text-gold fill-gold" />
