@@ -20,13 +20,15 @@ import {
   Bell,
   Search as SearchIcon,
   X,
-  Calendar
+  Calendar,
+  Candy
 } from 'lucide-react';
 import { api, fileToBase64 } from '../utils/api';
 import { Upload } from 'lucide-react';
 import Orders from './dashboard/Orders';
 import CustomOrders from './dashboard/CustomOrders';
 import Products from './dashboard/Products';
+import Toppings from './dashboard/Toppings';
 
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/19XRPcGbwEVAVbBh0O9SV0YED8tc0M-mAuBbNSBQjXz4/edit";
 
@@ -35,7 +37,7 @@ interface AdminDashboardProps {
 }
 
 export function AdminDashboard({ onBack }: AdminDashboardProps) {
-  const [view, setView] = useState<'overview' | 'add-product' | 'orders' | 'custom-orders' | 'products' | 'maintenance'>('overview');
+  const [view, setView] = useState<'overview' | 'add-product' | 'orders' | 'custom-orders' | 'products' | 'toppings' | 'maintenance'>('overview');
   const [stats, setStats] = useState({
     totalRevenue: 0,
     ordersToday: 0,
@@ -53,6 +55,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
     else if (path === '/dashboard/custom-orders') setView('custom-orders');
     else if (path === '/dashboard/add-product') setView('add-product');
     else if (path === '/dashboard/products') setView('products');
+    else if (path === '/dashboard/toppings') setView('toppings');
     else if (path === '/dashboard/maintenance') setView('maintenance');
 
     fetchMetrics();
@@ -153,6 +156,9 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
     imageName: '',
     image: '', // Existing image URL
     availability: 'Yes',
+    prepValue: '',
+    prepUnit: 'Minutes',
+    toppingsEnabled: false,
     variants: [{ size: '1/2kg', price: '', stock: '' }]
   });
 
@@ -161,11 +167,15 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
     setIsSubmitting(true);
     
     try {
+      const prepDuration = productForm.prepValue.trim()
+        ? `${productForm.prepValue.trim()} ${productForm.prepUnit}`
+        : '';
+
       if (editingProduct) {
         // Build prices and stock objects
         const prices: Record<string, number> = {};
         const stock: Record<string, number> = {};
-        
+
         productForm.variants.forEach((v: any) => {
           if (v.size) {
             if (v.price) prices[v.size] = parseFloat(v.price);
@@ -187,10 +197,15 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
           is_available: productForm.availability === 'Yes',
           prices: prices,
           stock: stock,
-          price: parseFloat(productForm.variants[0]?.price || '0')
+          price: parseFloat(productForm.variants[0]?.price || '0'),
+          prep_duration: prepDuration || null,
+          toppings_enabled: productForm.toppingsEnabled
         });
       } else {
-        await api.submitProduct(productForm, selectedFile || undefined);
+        await api.submitProduct(
+          { ...productForm, prep_duration: prepDuration, toppings_enabled: productForm.toppingsEnabled },
+          selectedFile || undefined
+        );
       }
       
       setIsSubmitting(false);
@@ -206,6 +221,9 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
           imageName: '',
           image: '',
           availability: 'Yes',
+          prepValue: '',
+          prepUnit: 'Minutes',
+          toppingsEnabled: false,
           variants: [{ size: '1/2kg', price: '', stock: '' }]
         });
         setSelectedFile(null);
@@ -219,6 +237,11 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
 
   const startEditing = (product: any) => {
     setEditingProduct(product);
+
+    const prepMatch = String(product.prep_duration || '').trim().match(/^(\d+(?:\.\d+)?)\s*(.*)$/);
+    const prepValue = prepMatch ? prepMatch[1] : '';
+    const prepUnit = prepMatch && /hour/i.test(prepMatch[2]) ? 'Hours' : 'Minutes';
+
     setProductForm({
       name: product.name,
       category: product.category,
@@ -226,6 +249,9 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
       imageName: '',
       image: product.image,
       availability: product.is_available ? 'Yes' : 'No',
+      prepValue,
+      prepUnit,
+      toppingsEnabled: !!product.toppings_enabled,
       variants: Object.entries(product.prices || {}).map(([size, price]) => ({
         size,
         price: String(price),
@@ -254,6 +280,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
             {[
               { id: 'overview', icon: Home, label: 'HOME' },
               { id: 'products', icon: Package, label: 'MY PRODUCTS' },
+              { id: 'toppings', icon: Candy, label: 'TOPPINGS' },
               { id: 'orders', icon: ListOrdered, label: 'ORDER LIST' },
               { id: 'custom-orders', icon: Sparkles, label: 'CUSTOM ORDERS' },
               { id: 'add-product', icon: PlusCircle, label: 'ADD PRODUCT' },
@@ -567,6 +594,47 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
                   </div>
                 </div>
 
+                {/* Preparation Duration */}
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-cocoa/80 ml-1">Preparation Duration</label>
+                  <p className="text-xs text-cocoa/40 ml-1">Lead time attached to this item in the customer's WhatsApp order message.</p>
+                  <div className="flex gap-3">
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="e.g. 45"
+                      value={productForm.prepValue}
+                      onChange={e => setProductForm({ ...productForm, prepValue: e.target.value })}
+                      className="flex-1 bg-cream-dark/50 border-2 border-transparent focus:border-blush/30 focus:bg-white rounded-2xl px-5 py-3.5 outline-none transition-all text-sm"
+                    />
+                    <select
+                      value={productForm.prepUnit}
+                      onChange={e => setProductForm({ ...productForm, prepUnit: e.target.value })}
+                      className="w-40 bg-cream-dark/50 border-2 border-transparent focus:border-blush/30 focus:bg-white rounded-2xl px-5 py-3.5 outline-none transition-all appearance-none text-sm"
+                    >
+                      <option>Minutes</option>
+                      <option>Hours</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Toppings toggle */}
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-cocoa/80 ml-1">Toppings</label>
+                  <label className="flex items-center gap-4 p-4 bg-cream-dark/50 rounded-2xl border-2 border-transparent cursor-pointer hover:bg-blush/10 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={productForm.toppingsEnabled}
+                      onChange={e => setProductForm({ ...productForm, toppingsEnabled: e.target.checked })}
+                      className="w-5 h-5 rounded-md accent-cocoa cursor-pointer shrink-0"
+                    />
+                    <span className="text-sm font-medium text-espresso">
+                      Enable toppings for this product
+                      <span className="block text-xs text-cocoa/40 font-normal">Customers get a "Toppings" step at checkout to add toppings to this item.</span>
+                    </span>
+                  </label>
+                </div>
+
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-cocoa/80 ml-1">Product Image</label>
                   <div className="w-full bg-cream-dark/50 border-2 border-dashed border-cocoa/10 rounded-[2rem] px-6 py-8 text-center hover:bg-blush/10 transition-colors relative group">
@@ -646,6 +714,15 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
               >
                 <Products onEdit={startEditing} />
               </motion.div>
+            ) : view === 'toppings' ? (
+              <motion.div
+                key="toppings"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+              >
+                <Toppings />
+              </motion.div>
             ) : view === 'orders' ? (
               <motion.div 
                 key="orders"
@@ -689,6 +766,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
           {[
             { id: 'overview', icon: Home, label: 'Home' },
             { id: 'products', icon: Package, label: 'Products' },
+            { id: 'toppings', icon: Candy, label: 'Toppings' },
             { id: 'orders', icon: ListOrdered, label: 'Orders' },
             { id: 'custom-orders', icon: Sparkles, label: 'Custom' },
             { id: 'add-product', icon: PlusCircle, label: 'Add' },

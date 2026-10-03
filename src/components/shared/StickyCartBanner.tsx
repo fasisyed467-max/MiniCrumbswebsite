@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowRight } from 'lucide-react';
 import { CartItem } from '../../types';
+import { getCartTotal } from '../../utils/cart';
 
 interface StickyCartBannerProps {
    cart: CartItem[];
@@ -25,7 +26,7 @@ export function StickyCartBanner({ cart, onCheckout }: StickyCartBannerProps) {
                      >
                         <div className="flex flex-col items-start gap-0.5">
                            <span className="text-[15px]">Selected {cart.reduce((a, b) => a + b.quantity, 0)} items</span>
-                           <span className="text-xs opacity-70">Total: ₹{cart.reduce((acc, item) => acc + (item.price * item.quantity), 0)}</span>
+                           <span className="text-xs opacity-70">Total: ₹{getCartTotal(cart)}</span>
                         </div>
                         <div className="flex items-center gap-2">
                            <span className="text-sm font-bold tracking-wide uppercase">Checkout</span>

@@ -231,6 +231,14 @@ export default function Orders() {
                         <span className={`text-xs font-bold ${order.status === 'pending' ? 'text-cocoa' : 'text-white/80'}`}>₹{item.price}</span>
                         <span className={`text-[10px] font-bold uppercase ${order.status === 'pending' ? 'text-cocoa/40' : 'text-white/40'}`}>Qty: {item.quantity}</span>
                       </div>
+                      {item.prepDuration && (
+                        <p className={`text-[10px] mt-1 ${order.status === 'pending' ? 'text-cocoa/50' : 'text-white/50'}`}>Prep: {item.prepDuration}</p>
+                      )}
+                      {item.toppings && item.toppings.length > 0 && (
+                        <p className={`text-[10px] mt-0.5 leading-snug ${order.status === 'pending' ? 'text-cocoa/50' : 'text-white/50'}`}>
+                          Toppings: {item.toppings.map(t => `${t.name} x${t.quantity}`).join(', ')}
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))}

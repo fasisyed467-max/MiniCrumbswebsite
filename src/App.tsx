@@ -1,6 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import posthog from 'posthog-js';
-import { Size, CartItem, CheckoutFormData, Product } from './types';
+import { Size, CartItem, CheckoutFormData, Product, Topping, SelectedTopping } from './types';
 import { SizeSelector } from './components/menu/SizeSelector';
 import { StickyCartBanner } from './components/shared/StickyCartBanner';
 import { CustomCakeModal } from './components/shared/CustomCakeModal';
@@ -37,6 +37,7 @@ export default function App() {
    const [viewAdmin, setViewAdmin] = useState(false);
    const [session, setSession] = useState<Session | null>(null);
    const [products, setProducts] = useState<Product[]>(FALLBACK_PRODUCTS);
+   const [toppings, setToppings] = useState<Topping[]>([]);
    const [isLoading, setIsLoading] = useState(true);
    const [isSubmitting, setIsSubmitting] = useState(false);
    const [checkoutForm, setCheckoutForm] = useState<CheckoutFormData>({
@@ -57,6 +58,11 @@ export default function App() {
       setIsLoading(false);
    };
 
+   const loadToppings = async () => {
+      const data = await api.fetchToppings();
+      setToppings(data);
+   };
+
    useEffect(() => {
       // Get initial session
       supabase.auth.getSession().then(({ data: { session } }) => {
@@ -72,6 +78,7 @@ export default function App() {
       if (products === FALLBACK_PRODUCTS) {
          loadProducts();
       }
+      loadToppings();
 
       return () => subscription.unsubscribe();
    }, []);
@@ -80,6 +87,9 @@ export default function App() {
       // Refresh products when returning from admin to ensure we have latest stock/prices
       if (!viewAdmin && products !== FALLBACK_PRODUCTS) {
          loadProducts();
+      }
+      if (!viewAdmin) {
+         loadToppings();
       }
    }, [viewAdmin]);
 
@@ -189,7 +199,10 @@ export default function App() {
          
          const link = createWaLink(cart, finalForm);
          posthog.capture('order_completed', { hasScreenshot: !!screenshotUrl });
-         
+
+         // Topping stock was just decremented server-side — refresh the local copy.
+         loadToppings();
+
          setCart([]);
          // Keep viewCheckout true so the user sees the success screen
          setCheckoutForm({
@@ -235,10 +248,17 @@ export default function App() {
             name: product.name,
             size,
             price: product.prices[size],
-            quantity: 1
+            quantity: 1,
+            prepDuration: product.prep_duration
          }];
       });
       setSizeModal({ isOpen: false, product: null }); 
+   };
+
+   const setCartItemToppings = (itemId: string, selected: SelectedTopping[]) => {
+      setCart(prev => prev.map(item =>
+         item.id === itemId ? { ...item, toppings: selected } : item
+      ));
    };
 
    const updateCartQuantity = (id: string, delta: number) => {
@@ -299,12 +319,14 @@ export default function App() {
             )}
 
             {viewCheckout && !viewAdmin && (
-               <Checkout 
+               <Checkout
                   products={products}
+                  toppings={toppings}
                   cart={cart}
                   checkoutForm={checkoutForm}
                   setCheckoutForm={setCheckoutForm}
                   updateCartQuantity={updateCartQuantity}
+                  setCartItemToppings={setCartItemToppings}
                   onBack={() => setViewCheckout(false)}
                   onSubmit={handleWhatsAppCheckout}
                   isSubmitting={isSubmitting}

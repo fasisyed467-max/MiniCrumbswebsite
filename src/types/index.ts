@@ -1,5 +1,12 @@
 export type Size = string;
 
+export type SelectedTopping = {
+   id: string;
+   name: string;
+   price: number;
+   quantity: number;
+};
+
 export type CartItem = {
    id: string;
    productId: string;
@@ -7,6 +14,17 @@ export type CartItem = {
    size: Size;
    price: number;
    quantity: number;
+   prepDuration?: string;
+   toppings?: SelectedTopping[];
+};
+
+export type Topping = {
+   id: string;
+   name: string;
+   price: number;
+   stock: number;
+   is_available: boolean;
+   created_at?: string;
 };
 
 export type CheckoutFormData = {
@@ -29,6 +47,8 @@ export type Product = {
    image: string;
    popular: boolean;
    is_available: boolean;
+   prep_duration?: string;
+   toppings_enabled?: boolean;
 };
 
 export type Order = {

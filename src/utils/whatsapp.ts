@@ -1,19 +1,28 @@
 import { CartItem, CheckoutFormData } from '../types';
 import { PHONE_NUMBER } from '../data/constants';
+import { getCartItemTotal, getCartTotal } from './cart';
 
 export function createWaLink(cart: CartItem[] = [], form?: CheckoutFormData) {
    let text = `*New Order from Mini Crumbs Website*\n`;
    text += `--------------------------\n\n`;
-   
+
    if (cart.length > 0) {
       cart.forEach((item, index) => {
          text += `*${index + 1}. ${item.name}*\n`;
          text += `Size: ${item.size}\n`;
          text += `Qty: ${item.quantity}\n`;
-         text += `Subtotal: ₹${item.price * item.quantity}\n\n`;
+         if (item.prepDuration) {
+            text += `Prep time: ${item.prepDuration}\n`;
+         }
+         if (item.toppings && item.toppings.length > 0) {
+            text += `Toppings:\n`;
+            item.toppings.forEach(t => {
+               text += `   - ${t.name} x${t.quantity} — ₹${t.price * t.quantity}\n`;
+            });
+         }
+         text += `Subtotal: ₹${getCartItemTotal(item)}\n\n`;
       });
-      const total = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-      text += `*Total Amount:* ₹${total}\n`;
+      text += `*Total Amount:* ₹${getCartTotal(cart)}\n`;
       text += `--------------------------\n\n`;
    }
 
@@ -31,9 +40,8 @@ export function createWaLink(cart: CartItem[] = [], form?: CheckoutFormData) {
       }
       text += `\n`;
    }
-   
+
    text += `Please confirm my order. Thanks!`;
-   
+
    return `https://wa.me/${PHONE_NUMBER}?text=${encodeURIComponent(text)}`;
 }
-

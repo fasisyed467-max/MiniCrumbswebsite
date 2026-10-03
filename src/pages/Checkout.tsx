@@ -1,44 +1,94 @@
 import React, { useState, useRef, useMemo } from 'react';
 import posthog from 'posthog-js';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowRight, Minus, Plus, MapPin, MessageCircle, CreditCard, CheckCircle2, Download, Upload, Image as ImageIcon } from 'lucide-react';
-import { CartItem, CheckoutFormData, Product } from '../types';
+import { ArrowRight, Minus, Plus, MapPin, MessageCircle, CreditCard, CheckCircle2, Download, Upload, Image as ImageIcon, Candy, ChevronDown } from 'lucide-react';
+import { CartItem, CheckoutFormData, Product, Topping, SelectedTopping } from '../types';
 import { Loader2 } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
+import { getCartTotal, getCartItemTotal, getToppingsTotal } from '../utils/cart';
 
 interface CheckoutProps {
     products: Product[];
+    toppings: Topping[];
     cart: CartItem[];
     checkoutForm: CheckoutFormData;
     setCheckoutForm: (form: CheckoutFormData) => void;
     updateCartQuantity: (id: string, delta: number) => void;
+    setCartItemToppings: (itemId: string, selected: SelectedTopping[]) => void;
     onBack: () => void;
     onSubmit: () => Promise<string | undefined>;
     isSubmitting: boolean;
     checkCartStock: () => Promise<{ isValid: boolean; errors?: string[] }>;
 }
 
-type CheckoutStep = 'summary' | 'shipping' | 'payment' | 'details' | 'success';
+type CheckoutStep = 'toppings' | 'summary' | 'shipping' | 'payment' | 'details' | 'success';
 
 export function Checkout({
     products,
+    toppings,
     cart,
     checkoutForm,
     setCheckoutForm,
     updateCartQuantity,
+    setCartItemToppings,
     onBack,
     onSubmit,
     isSubmitting,
     checkCartStock
 }: CheckoutProps) {
-    const [step, setStep] = useState<CheckoutStep>('summary');
+    const cartHasToppings = useMemo(
+        () => cart.some(item => products.find(p => p.id === item.productId)?.toppings_enabled),
+        [cart, products]
+    );
+
+    const stepOrder = useMemo<CheckoutStep[]>(
+        () => [
+            ...(cartHasToppings ? ['toppings' as const] : []),
+            'summary', 'shipping', 'payment', 'details', 'success'
+        ],
+        [cartHasToppings]
+    );
+
+    const [step, setStep] = useState<CheckoutStep>(cartHasToppings ? 'toppings' : 'summary');
     const [isCheckingStock, setIsCheckingStock] = useState(false);
     const [rapidoAgreed, setRapidoAgreed] = useState(false);
     const [deliveryTimeAgreed, setDeliveryTimeAgreed] = useState(false);
     const [waLink, setWaLink] = useState('');
+    const [expandedToppingItem, setExpandedToppingItem] = useState<string | null>(null);
     const qrRef = useRef<HTMLDivElement>(null);
 
-    const total = cart.reduce((a, b) => a + (b.price * b.quantity), 0);
+    const total = getCartTotal(cart);
+
+    // Remaining stock for a topping, accounting for what is already chosen on OTHER cart lines.
+    const remainingToppingStock = (toppingId: string, exceptItemId: string) => {
+        const topping = toppings.find(t => t.id === toppingId);
+        if (!topping) return 0;
+        const chosenElsewhere = cart.reduce((sum, item) => {
+            if (item.id === exceptItemId) return sum;
+            const sel = item.toppings?.find(s => s.id === toppingId);
+            return sum + (sel?.quantity || 0);
+        }, 0);
+        return Math.max(0, topping.stock - chosenElsewhere);
+    };
+
+    const changeItemTopping = (item: CartItem, topping: Topping, delta: number) => {
+        const current = item.toppings ?? [];
+        const existing = current.find(s => s.id === topping.id);
+        const currentQty = existing?.quantity || 0;
+        const max = remainingToppingStock(topping.id, item.id);
+        const nextQty = Math.max(0, Math.min(max, currentQty + delta));
+        if (nextQty === currentQty) return;
+
+        let next: SelectedTopping[];
+        if (nextQty === 0) {
+            next = current.filter(s => s.id !== topping.id);
+        } else if (existing) {
+            next = current.map(s => s.id === topping.id ? { ...s, quantity: nextQty } : s);
+        } else {
+            next = [...current, { id: topping.id, name: topping.name, price: topping.price, quantity: nextQty }];
+        }
+        setCartItemToppings(item.id, next);
+    };
     const orderId = useMemo(() => `MC-${Date.now()}`, []);
     const upiLink = `upi://pay?pa=6304407083@axl&pn=${encodeURIComponent('Qudsiya Khan')}&tn=${encodeURIComponent('Order ' + orderId)}&am=${total.toFixed(2)}&cu=INR`;
 
@@ -100,14 +150,13 @@ export function Checkout({
             <div className="sticky top-0 w-full z-50 bg-[#F9F8F6] border-b border-espresso/10 py-5 px-6 lg:px-12 flex items-center justify-between shadow-sm">
                 <button
                     onClick={() => {
-                        if (step === 'summary') {
+                        if (step === stepOrder[0]) {
                             posthog.capture('returned_to_home');
                             onBack();
                         } else {
                             setStep(prev => {
-                                const stepOrder: CheckoutStep[] = ['summary', 'shipping', 'payment', 'details', 'success'];
                                 const currentIndex = stepOrder.indexOf(prev);
-                                return currentIndex > 0 ? stepOrder[currentIndex - 1] : 'summary';
+                                return currentIndex > 0 ? stepOrder[currentIndex - 1] : stepOrder[0];
                             });
                         }
                     }}
@@ -116,7 +165,7 @@ export function Checkout({
                     <ArrowRight size={18} className="rotate-180" /> Back
                 </button>
                 <span className="font-serif text-lg sm:text-2xl font-semibold text-espresso absolute left-1/2 -translate-x-1/2 whitespace-nowrap hidden xs:block">
-                    {step === 'summary' ? 'Checkout' : step === 'shipping' ? 'Shipping Info' : step === 'payment' ? 'Payment' : 'Details'}
+                    {step === 'toppings' ? 'Toppings' : step === 'summary' ? 'Checkout' : step === 'shipping' ? 'Shipping Info' : step === 'payment' ? 'Payment' : 'Details'}
                 </span>
                 <div className="w-16"></div>
             </div>
@@ -124,27 +173,142 @@ export function Checkout({
             <div className="max-w-3xl mx-auto px-6 py-8 pb-32">
                 {/* Progress Bar */}
                 <div className="flex justify-between mb-10 px-4">
-                    {[
-                        { id: 'summary', label: 'Summary', icon: ArrowRight },
-                        { id: 'shipping', label: 'Shipping', icon: MapPin },
-                        { id: 'payment', label: 'Payment', icon: CreditCard },
-                        { id: 'details', label: 'Details', icon: CheckCircle2 }
-                    ].map((s, i) => (
-                        <div key={s.id} className="flex flex-col items-center gap-2 relative">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-500 ${step === s.id ? 'bg-espresso text-cream border-espresso shadow-lg scale-110' :
-                                    (i < ['summary', 'shipping', 'payment', 'details', 'success'].indexOf(step) ? 'bg-green-500 border-green-500 text-white' : 'bg-white border-espresso/10 text-espresso/30')
-                                }`}>
-                                {i < ['summary', 'shipping', 'payment', 'details', 'success'].indexOf(step) ? <CheckCircle2 size={18} /> : <s.icon size={18} />}
-                            </div>
-                            <span className={`text-[10px] font-bold uppercase tracking-widest ${step === s.id ? 'text-espresso' : 'text-espresso/30'}`}>{s.label}</span>
-                            {i < 3 && <div className={`absolute left-10 md:left-12 top-5 w-14 sm:w-20 md:w-32 lg:w-40 h-[2px] bg-espresso/5 -z-10`}>
-                                <div className={`h-full bg-green-500 transition-all duration-500 ${i < ['summary', 'shipping', 'payment', 'details', 'success'].indexOf(step) ? 'w-full' : 'w-0'}`}></div>
-                            </div>}
-                        </div>
-                    ))}
+                    {(() => {
+                        const baseSteps = [
+                            { id: 'summary', label: 'Summary', icon: ArrowRight },
+                            { id: 'shipping', label: 'Shipping', icon: MapPin },
+                            { id: 'payment', label: 'Payment', icon: CreditCard },
+                            { id: 'details', label: 'Details', icon: CheckCircle2 }
+                        ];
+                        const progressSteps = cartHasToppings
+                            ? [{ id: 'toppings', label: 'Toppings', icon: Candy }, ...baseSteps]
+                            : baseSteps;
+                        const currentPos = stepOrder.indexOf(step);
+                        return progressSteps.map((s, i) => {
+                            const stepPos = stepOrder.indexOf(s.id as CheckoutStep);
+                            const done = stepPos < currentPos;
+                            return (
+                                <div key={s.id} className="flex flex-col items-center gap-2 relative">
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-500 ${step === s.id ? 'bg-espresso text-cream border-espresso shadow-lg scale-110' :
+                                            (done ? 'bg-green-500 border-green-500 text-white' : 'bg-white border-espresso/10 text-espresso/30')
+                                        }`}>
+                                        {done ? <CheckCircle2 size={18} /> : <s.icon size={18} />}
+                                    </div>
+                                    <span className={`text-[10px] font-bold uppercase tracking-widest ${step === s.id ? 'text-espresso' : 'text-espresso/30'}`}>{s.label}</span>
+                                    {i < progressSteps.length - 1 && <div className={`absolute left-10 md:left-12 top-5 w-14 sm:w-20 md:w-32 lg:w-40 h-[2px] bg-espresso/5 -z-10`}>
+                                        <div className={`h-full bg-green-500 transition-all duration-500 ${done ? 'w-full' : 'w-0'}`}></div>
+                                    </div>}
+                                </div>
+                            );
+                        });
+                    })()}
                 </div>
 
                 <AnimatePresence mode="wait">
+                    {step === 'toppings' && (
+                        <motion.div
+                            key="toppings"
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            className="space-y-6"
+                        >
+                            <div>
+                                <h2 className="text-2xl font-serif text-espresso mb-1">Add Toppings</h2>
+                                <p className="text-sm text-cocoa/60">Optional extras for the items below. Tap an item to expand.</p>
+                            </div>
+
+                            <div className="space-y-4">
+                                {cart.map(item => {
+                                    const product = products.find(p => p.id === item.productId);
+                                    if (!product?.toppings_enabled) return null;
+                                    const isOpen = expandedToppingItem === item.id;
+                                    const selectedCount = (item.toppings ?? []).reduce((a, t) => a + t.quantity, 0);
+                                    return (
+                                        <div key={item.id} className="bg-white rounded-3xl shadow-sm border border-cocoa/5 overflow-hidden">
+                                            <button
+                                                type="button"
+                                                onClick={() => setExpandedToppingItem(isOpen ? null : item.id)}
+                                                className="w-full flex items-center justify-between gap-3 p-5 text-left"
+                                            >
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <Candy size={18} className="text-blush shrink-0" />
+                                                    <div className="min-w-0">
+                                                        <p className="font-semibold text-espresso truncate">Add toppings — {item.name}</p>
+                                                        <p className="text-xs text-cocoa/50">{item.size}{selectedCount > 0 ? ` • ${selectedCount} added (₹${getToppingsTotal(item)})` : ''}</p>
+                                                    </div>
+                                                </div>
+                                                <ChevronDown size={20} className={`text-cocoa/40 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                                            </button>
+
+                                            {isOpen && (
+                                                <div className="px-5 pb-5 space-y-3 border-t border-cocoa/5 pt-4">
+                                                    {toppings.length === 0 && (
+                                                        <p className="text-sm text-cocoa/50 text-center py-2">No toppings available right now.</p>
+                                                    )}
+                                                    {toppings.map(topping => {
+                                                        const sel = item.toppings?.find(s => s.id === topping.id);
+                                                        const qty = sel?.quantity || 0;
+                                                        const remaining = remainingToppingStock(topping.id, item.id);
+                                                        const soldOut = !topping.is_available || (remaining <= 0 && qty === 0);
+                                                        return (
+                                                            <div key={topping.id} className={`flex items-center justify-between gap-3 ${soldOut ? 'opacity-40' : ''}`}>
+                                                                <div className="min-w-0">
+                                                                    <p className="text-sm font-medium text-espresso truncate">{topping.name}</p>
+                                                                    <p className="text-xs text-cocoa/50">₹{topping.price}{soldOut ? ' • Out of stock' : ''}</p>
+                                                                </div>
+                                                                <div className="flex items-center gap-3 bg-cream-dark rounded-full p-1 border border-cocoa/5 shrink-0">
+                                                                    <button
+                                                                        type="button"
+                                                                        disabled={soldOut || qty === 0}
+                                                                        onClick={() => changeItemTopping(item, topping, -1)}
+                                                                        className="w-6 h-6 flex items-center justify-center rounded-full text-cocoa hover:text-espresso transition-colors disabled:opacity-30"
+                                                                    >
+                                                                        <Minus size={14} />
+                                                                    </button>
+                                                                    <span className="text-sm font-medium w-4 text-center">{qty}</span>
+                                                                    <button
+                                                                        type="button"
+                                                                        disabled={soldOut || qty >= remaining}
+                                                                        onClick={() => changeItemTopping(item, topping, 1)}
+                                                                        className="w-6 h-6 flex items-center justify-center rounded-full bg-espresso text-cream shadow-sm disabled:opacity-30"
+                                                                    >
+                                                                        <Plus size={14} />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            <button
+                                disabled={isCheckingStock}
+                                onClick={async () => {
+                                    setIsCheckingStock(true);
+                                    const res = await checkCartStock();
+                                    setIsCheckingStock(false);
+                                    if (res.isValid) {
+                                        setStep('summary');
+                                    } else {
+                                        alert(`Some items in your cart are no longer available in the requested quantity:\n\n${res.errors?.join('\n')}\n\nYour cart has been automatically updated.`);
+                                    }
+                                }}
+                                className="w-full bg-espresso text-cream font-bold py-5 rounded-3xl shadow-xl flex justify-center gap-3 items-center active:scale-95 transition-transform disabled:opacity-50"
+                            >
+                                {isCheckingStock ? (
+                                    <>Verifying Stock... <Loader2 className="animate-spin" size={20} /></>
+                                ) : (
+                                    <>Continue to Summary <ArrowRight size={20} /></>
+                                )}
+                            </button>
+                        </motion.div>
+                    )}
+
                     {step === 'summary' && (
                         <motion.div
                             key="summary"
@@ -161,8 +325,9 @@ export function Checkout({
                                     <div className="space-y-6">
                                         {cart.map(item => {
                                             const product = products.find(p => p.id === item.productId);
+                                            const itemToppings = item.toppings ?? [];
                                             return (
-                                                <div key={item.id} className="flex gap-4 items-center">
+                                                <div key={item.id} className="flex gap-4 items-start">
                                                     <img src={product?.image} className="w-16 h-16 rounded-2xl object-cover bg-cream border-2 border-white shadow-sm" alt={item.name} />
                                                     <div className="flex-grow">
                                                         <h4 className="font-semibold text-espresso">{item.name}</h4>
@@ -178,6 +343,19 @@ export function Checkout({
                                                                 </button>
                                                             </div>
                                                         </div>
+                                                        {itemToppings.length > 0 && (
+                                                            <div className="mt-2 pl-3 border-l-2 border-blush/40 space-y-0.5">
+                                                                {itemToppings.map(t => (
+                                                                    <p key={t.id} className="text-xs text-cocoa/70 flex justify-between gap-2">
+                                                                        <span>+ {t.name} ×{t.quantity}</span>
+                                                                        <span>₹{t.price * t.quantity}</span>
+                                                                    </p>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                        {itemToppings.length > 0 && (
+                                                            <p className="text-xs font-semibold text-espresso/70 mt-1 text-right">Item total: ₹{getCartItemTotal(item)}</p>
+                                                        )}
                                                     </div>
                                                 </div>
                                             )

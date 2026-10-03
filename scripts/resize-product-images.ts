@@ -28,6 +28,9 @@ const MAX_DIMENSION = 800;
 // below 70 the savings flatten out and artifacts start showing.
 const WEBP_QUALITY = 75;
 const BUCKET = 'products';
+// Anything at or under this is already cheap to serve; re-encoding it just
+// creates a second copy for no real saving.
+const SKIP_BELOW_BYTES = 300 * 1024;
 
 const APPLY = process.argv.includes('--apply');
 
@@ -55,9 +58,17 @@ async function main() {
 
   if (error) throw error;
 
-  const targets = (products || []).filter((p) =>
-    p.image_url?.includes('/storage/v1/object/public/products/')
-  );
+  // The admin edit form can save back the proxied form of a URL
+  // (`/api/img/storage/v1/...`). Map it to the real Supabase URL so it can be
+  // fetched here; the product's new image_url is a full Supabase URL anyway.
+  const targets = (products || [])
+    .filter((p) => p.image_url?.includes('/storage/v1/object/public/products/'))
+    .map((p) => ({
+      ...p,
+      image_url: p.image_url.startsWith('/api/img/')
+        ? supabaseUrl + p.image_url.slice('/api/img'.length)
+        : p.image_url,
+    }));
 
   console.log(`${targets.length} products with Supabase-hosted images\n`);
 
@@ -71,10 +82,27 @@ async function main() {
 
   let before = 0;
   let after = 0;
+  let skipped = 0;
   const failures: string[] = [];
 
   for (const product of targets) {
     try {
+      // Already-optimised images (WebP from a previous run or the upload
+      // compressor) are left alone. A HEAD request tells us the size without
+      // pulling the body, so skipped files cost no egress.
+      if (/\.webp(\?.*)?$/i.test(product.image_url)) {
+        console.log(`${product.name}\n   skip: already WebP`);
+        skipped++;
+        continue;
+      }
+      const head = await fetch(product.image_url, { method: 'HEAD' });
+      const headSize = Number(head.headers.get('content-length') || 0);
+      if (headSize > 0 && headSize < SKIP_BELOW_BYTES) {
+        console.log(`${product.name}\n   skip: already small (${kb(headSize)})`);
+        skipped++;
+        continue;
+      }
+
       const res = await fetch(product.image_url);
       if (!res.ok) throw new Error(`download failed: HTTP ${res.status}`);
       const original = Buffer.from(await res.arrayBuffer());
@@ -138,6 +166,7 @@ async function main() {
     `\nper page view: ${kb(before)} -> ${kb(after)}` +
       (before ? `  (-${((1 - after / before) * 100).toFixed(0)}%)` : '')
   );
+  console.log(`skipped (already small / WebP): ${skipped}`);
   if (failures.length) {
     console.log(`failed: ${failures.join(', ')}`);
   }

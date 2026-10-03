@@ -1,7 +1,8 @@
 import imageCompression from 'browser-image-compression';
-import { CartItem, CheckoutFormData, Product } from '../types';
+import { CartItem, CheckoutFormData, Product, Topping } from '../types';
 import { supabase } from './supabase';
 import { toProxiedImageUrl } from './imageProxy';
+import { getCartTotal } from './cart';
 
 let productsCache: Product[] | null = null;
 let lastFetch = 0;
@@ -75,7 +76,7 @@ export const api = {
 
   async submitOrder(cart: CartItem[], formData: CheckoutFormData) {
     try {
-      const totalAmount = cart.reduce((a, b) => a + (b.price * b.quantity), 0);
+      const totalAmount = getCartTotal(cart);
 
       const { error } = await supabase.rpc('place_order_with_stock', {
         p_customer_name: formData.name,
@@ -88,9 +89,82 @@ export const api = {
       });
 
       if (error) throw error;
+
+      // Decrement topping stock. Best-effort: a failure here must not block the
+      // order that already succeeded above.
+      await this.consumeToppings(cart);
+
       return true;
     } catch (error) {
       console.error('Error submitting order:', error);
+      throw error;
+    }
+  },
+
+  async consumeToppings(cart: CartItem[]) {
+    try {
+      const totals = new Map<string, number>();
+      for (const item of cart) {
+        for (const t of item.toppings ?? []) {
+          totals.set(t.id, (totals.get(t.id) || 0) + t.quantity);
+        }
+      }
+      if (totals.size === 0) return;
+
+      const p_toppings = Array.from(totals.entries()).map(([id, quantity]) => ({ id, quantity }));
+      const { error } = await supabase.rpc('consume_toppings', { p_toppings });
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error consuming topping stock:', error);
+    }
+  },
+
+  async fetchToppings(): Promise<Topping[]> {
+    try {
+      const { data, error } = await supabase
+        .from('toppings')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      return (data || []).map(t => ({ ...t, price: parseFloat(t.price) })) as Topping[];
+    } catch (error) {
+      console.error('Error fetching toppings:', error);
+      return [];
+    }
+  },
+
+  async createTopping(topping: { name: string; price: number; stock: number }) {
+    try {
+      const { error } = await supabase.from('toppings').insert([{
+        name: topping.name,
+        price: topping.price,
+        stock: topping.stock,
+        is_available: true
+      }]);
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error creating topping:', error);
+      throw error;
+    }
+  },
+
+  async updateTopping(id: string, updates: Partial<Pick<Topping, 'name' | 'price' | 'stock' | 'is_available'>>) {
+    try {
+      const { error } = await supabase.from('toppings').update(updates).eq('id', id);
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error updating topping:', error);
+      throw error;
+    }
+  },
+
+  async deleteTopping(id: string) {
+    try {
+      const { error } = await supabase.from('toppings').delete().eq('id', id);
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error deleting topping:', error);
       throw error;
     }
   },
@@ -156,7 +230,9 @@ export const api = {
           is_available: product.availability === 'Yes',
           is_popular: false,
           prices: prices,
-          stock: stock
+          stock: stock,
+          prep_duration: product.prep_duration || null,
+          toppings_enabled: !!product.toppings_enabled
         }]);
 
       if (error) throw error;
