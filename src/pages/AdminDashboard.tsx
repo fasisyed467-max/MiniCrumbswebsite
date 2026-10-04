@@ -41,10 +41,12 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
   const [stats, setStats] = useState({
     totalRevenue: 0,
     ordersToday: 0,
-    pendingStandard: 0,
-    pendingCustom: 0,
+    lifetimeRevenue: 0,
+    lifetimeStandard: 0,
+    lifetimeCustom: 0,
     activeProducts: 0
   });
+  const [isLifetimeLoading, setIsLifetimeLoading] = useState(true);
   const [isStatsLoading, setIsStatsLoading] = useState(true);
   const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'custom'>('today');
   const [customRange, setCustomRange] = useState({ start: '', end: '' });
@@ -70,17 +72,18 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
     return () => clearInterval(interval);
   }, [dateRange, customRange]);
 
+  // Lifetime numbers read every order's amount, so they load once per dashboard visit
+  // (not on the 30s poll or when the range changes).
+  useEffect(() => {
+    api.fetchLifetimeStats()
+      .then(l => setStats(prev => ({ ...prev, lifetimeRevenue: l.revenue, lifetimeStandard: l.standardCount, lifetimeCustom: l.customCount })))
+      .catch(error => console.error('Error fetching lifetime stats:', error))
+      .finally(() => setIsLifetimeLoading(false));
+  }, []);
+
   const fetchMetrics = async () => {
     setIsStatsLoading(true);
     try {
-      const [products, standardOrders, customOrders] = await Promise.all([
-        api.fetchProducts(true),
-        api.fetchOrders(),
-        api.fetchCustomOrders()
-      ]);
-
-      const allOrders = [...standardOrders, ...customOrders];
-      
       // Filter orders by date range
       const now = new Date();
       let startDate = new Date();
@@ -100,11 +103,12 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
         endDate.setHours(23, 59, 59, 999);
       }
 
-      const filteredOrders = allOrders.filter(o => {
-        const orderDate = new Date(o.created_at);
-        return orderDate >= startDate && orderDate <= endDate;
-      });
-      
+      const [products, rangeStats] = await Promise.all([
+        api.fetchProducts(true),
+        api.fetchOrderRangeStats(startDate.toISOString(), endDate.toISOString())
+      ]);
+      const filteredOrders = rangeStats.rangeRows;
+
       // Calculate Revenue (Sum of filtered orders except cancelled)
       const revenue = filteredOrders
         .filter(o => o.status !== 'cancelled')
@@ -113,25 +117,17 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
       // Orders in Range
       const ordersInRangeCount = filteredOrders.length;
 
-      // Split Pending Counts
-      const pendingStandard = standardOrders.filter(o => 
-        ['pending', 'received', 'baking', 'delivery'].includes(o.status)
-      ).length;
-
-      const pendingCustom = customOrders.filter(o => 
-        ['pending', 'received', 'baking', 'delivery'].includes(o.status)
-      ).length;
-
       // Active Products
       const activeCount = products.filter(p => p.is_available).length;
 
-      setStats({
+      setStats(prev => ({
         totalRevenue: revenue,
         ordersToday: ordersInRangeCount,
-        pendingStandard: pendingStandard,
-        pendingCustom: pendingCustom,
+        lifetimeRevenue: prev.lifetimeRevenue,
+        lifetimeStandard: prev.lifetimeStandard,
+        lifetimeCustom: prev.lifetimeCustom,
         activeProducts: activeCount
-      });
+      }));
     } catch (error) {
       console.error('Error fetching metrics:', error);
     } finally {
@@ -157,7 +153,6 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
     image: '', // Existing image URL
     availability: 'Yes',
     prepValue: '',
-    prepUnit: 'Minutes',
     toppingsEnabled: false,
     variants: [{ size: '1/2kg', price: '', stock: '' }]
   });
@@ -167,9 +162,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
     setIsSubmitting(true);
     
     try {
-      const prepDuration = productForm.prepValue.trim()
-        ? `${productForm.prepValue.trim()} ${productForm.prepUnit}`
-        : '';
+      const prepDuration = productForm.prepValue.trim();
 
       if (editingProduct) {
         // Build prices and stock objects
@@ -222,7 +215,6 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
           image: '',
           availability: 'Yes',
           prepValue: '',
-          prepUnit: 'Minutes',
           toppingsEnabled: false,
           variants: [{ size: '1/2kg', price: '', stock: '' }]
         });
@@ -238,9 +230,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
   const startEditing = (product: any) => {
     setEditingProduct(product);
 
-    const prepMatch = String(product.prep_duration || '').trim().match(/^(\d+(?:\.\d+)?)\s*(.*)$/);
-    const prepValue = prepMatch ? prepMatch[1] : '';
-    const prepUnit = prepMatch && /hour/i.test(prepMatch[2]) ? 'Hours' : 'Minutes';
+    const prepValue = String(product.prep_duration || '').trim();
 
     setProductForm({
       name: product.name,
@@ -250,7 +240,6 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
       image: product.image,
       availability: product.is_available ? 'Yes' : 'No',
       prepValue,
-      prepUnit,
       toppingsEnabled: !!product.toppings_enabled,
       variants: Object.entries(product.prices || {}).map(([size, price]) => ({
         size,
@@ -433,6 +422,13 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
                           {dateRange === 'today' ? 'Orders Today' : dateRange === 'week' ? 'Orders (7d)' : dateRange === 'month' ? 'Orders (30d)' : 'Orders (Custom)'}
                         </span>
                       </div>
+                      <div className="w-px bg-cream/10 h-12 self-center"></div>
+                      <div>
+                        <span className="block text-4xl font-bold mb-1">{isStatsLoading ? '...' : `₹${stats.totalRevenue.toLocaleString('en-IN')}`}</span>
+                        <span className="text-sm text-cream/50 uppercase tracking-widest font-medium">
+                          {dateRange === 'today' ? 'Revenue Today' : dateRange === 'week' ? 'Revenue (7d)' : dateRange === 'month' ? 'Revenue (30d)' : 'Revenue (Custom)'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                   <div className="absolute top-0 right-0 p-12 opacity-10">
@@ -443,9 +439,9 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
                 {/* Quick Stats Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   {[
-                    { label: 'Total Revenue', value: `₹${stats.totalRevenue.toLocaleString('en-IN')}`, icon: BarChart3, color: 'text-green-500' },
-                    { label: 'Standard Orders', value: String(stats.pendingStandard).padStart(2, '0'), icon: ListOrdered, color: 'text-amber-500' },
-                    { label: 'Custom Orders', value: String(stats.pendingCustom).padStart(2, '0'), icon: Sparkles, color: 'text-blush' },
+                    { label: 'Lifetime Revenue', value: `₹${stats.lifetimeRevenue.toLocaleString('en-IN')}`, icon: BarChart3, color: 'text-green-500' },
+                    { label: 'Standard Orders', value: String(stats.lifetimeStandard).padStart(2, '0'), icon: ListOrdered, color: 'text-amber-500' },
+                    { label: 'Custom Orders', value: String(stats.lifetimeCustom).padStart(2, '0'), icon: Sparkles, color: 'text-blush' },
                     { label: 'Active Menu', value: `${stats.activeProducts} Items`, icon: Package, color: 'text-cocoa' },
                   ].map((stat, i) => (
                     <div key={i} className="bg-white p-8 rounded-[2.5rem] border border-espresso/5 shadow-sm">
@@ -453,7 +449,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
                         <stat.icon className={stat.color} size={24} />
                       </div>
                       <p className="text-xs font-bold text-cocoa/40 uppercase tracking-widest mb-1">{stat.label}</p>
-                      <p className="text-2xl font-serif font-bold text-espresso">{isStatsLoading ? '...' : stat.value}</p>
+                      <p className="text-2xl font-serif font-bold text-espresso">{(i < 3 ? isLifetimeLoading : isStatsLoading) ? '...' : stat.value}</p>
                     </div>
                   ))}
                 </div>
@@ -594,28 +590,17 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
                   </div>
                 </div>
 
-                {/* Preparation Duration */}
+                {/* Preparation Time */}
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-cocoa/80 ml-1">Preparation Duration</label>
-                  <p className="text-xs text-cocoa/40 ml-1">Lead time attached to this item in the customer's WhatsApp order message.</p>
-                  <div className="flex gap-3">
-                    <input
-                      type="number"
-                      min="0"
-                      placeholder="e.g. 45"
-                      value={productForm.prepValue}
-                      onChange={e => setProductForm({ ...productForm, prepValue: e.target.value })}
-                      className="flex-1 bg-cream-dark/50 border-2 border-transparent focus:border-blush/30 focus:bg-white rounded-2xl px-5 py-3.5 outline-none transition-all text-sm"
-                    />
-                    <select
-                      value={productForm.prepUnit}
-                      onChange={e => setProductForm({ ...productForm, prepUnit: e.target.value })}
-                      className="w-40 bg-cream-dark/50 border-2 border-transparent focus:border-blush/30 focus:bg-white rounded-2xl px-5 py-3.5 outline-none transition-all appearance-none text-sm"
-                    >
-                      <option>Minutes</option>
-                      <option>Hours</option>
-                    </select>
-                  </div>
+                  <label className="text-sm font-semibold text-cocoa/80 ml-1">Preparation Time</label>
+                  <p className="text-xs text-cocoa/40 ml-1">The time you start preparing this item (e.g. 8 PM). Shown on the menu and in the customer's WhatsApp order message. Leave empty to hide it.</p>
+                  <input
+                    type="text"
+                    placeholder="e.g. 8 PM"
+                    value={productForm.prepValue}
+                    onChange={e => setProductForm({ ...productForm, prepValue: e.target.value })}
+                    className="w-full bg-cream-dark/50 border-2 border-transparent focus:border-blush/30 focus:bg-white rounded-2xl px-5 py-3.5 outline-none transition-all text-sm"
+                  />
                 </div>
 
                 {/* Toppings toggle */}

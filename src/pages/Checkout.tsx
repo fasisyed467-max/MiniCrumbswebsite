@@ -53,6 +53,7 @@ export function Checkout({
     const [isCheckingStock, setIsCheckingStock] = useState(false);
     const [rapidoAgreed, setRapidoAgreed] = useState(false);
     const [deliveryTimeAgreed, setDeliveryTimeAgreed] = useState(false);
+    const [riskAgreed, setRiskAgreed] = useState(false);
     const [waLink, setWaLink] = useState('');
     const [expandedToppingItem, setExpandedToppingItem] = useState<string | null>(null);
     const qrRef = useRef<HTMLDivElement>(null);
@@ -424,12 +425,11 @@ export function Checkout({
                                         Delivery Time Window
                                     </p>
                                     <p className="text-xs sm:text-sm text-rose-800/80 leading-relaxed">
-                                        All orders are shipped and delivered between
-                                        <span className="font-bold text-rose-900"> 6:00 PM – 8:00 PM only</span>. Please ensure someone is available to receive the order during this window.
+                                        Deliveries begin at <span className="font-bold text-rose-900">6:00 PM</span>. The exact delivery time may vary depending on the item ordered and delivery schedule. Our team will contact you to confirm your estimated delivery time. Please ensure someone is available to receive the order accordingly.
                                     </p>
                                 </div>
 
-                                <label className="flex items-center gap-3 sm:gap-4 p-4 sm:p-5 bg-rose-50 rounded-xl sm:rounded-2xl border border-rose-200 cursor-pointer group hover:bg-rose-100/60 transition-colors mb-4">
+                                <label className="flex items-center gap-3 p-3 sm:p-4 bg-rose-50 rounded-xl sm:rounded-2xl border border-rose-200 cursor-pointer group hover:bg-rose-100/60 transition-colors mb-2">
                                     <input
                                         type="checkbox"
                                         checked={deliveryTimeAgreed}
@@ -437,11 +437,11 @@ export function Checkout({
                                         className="w-5 h-5 sm:w-6 sm:h-6 rounded-lg accent-rose-600 cursor-pointer shrink-0"
                                     />
                                     <span className="text-xs sm:text-sm font-medium text-rose-900 text-left leading-snug">
-                                        I understand my order will be shipped between <strong>6 PM – 8 PM</strong> only.
+                                        I understand that deliveries begin at <strong>6:00 PM</strong> and that my exact delivery time will be communicated by the Mini Crumbs team.
                                     </span>
                                 </label>
 
-                                <label className="flex items-center gap-3 sm:gap-4 p-4 sm:p-5 bg-cream rounded-xl sm:rounded-2xl border border-espresso/5 cursor-pointer group hover:bg-cream-dark transition-colors">
+                                <label className="flex items-center gap-3 p-3 sm:p-4 bg-cream rounded-xl sm:rounded-2xl border border-espresso/5 cursor-pointer group hover:bg-cream-dark transition-colors">
                                     <input
                                         type="checkbox"
                                         checked={rapidoAgreed}
@@ -452,10 +452,24 @@ export function Checkout({
                                         I understand and agree to pay the Rapido shipping charges separately.
                                     </span>
                                 </label>
+
+                                <label className="flex items-center gap-3 p-3 sm:p-4 bg-cream rounded-xl sm:rounded-2xl border border-espresso/5 cursor-pointer group hover:bg-cream-dark transition-colors mt-2">
+                                    <input
+                                        type="checkbox"
+                                        checked={riskAgreed}
+                                        onChange={(e) => setRiskAgreed(e.target.checked)}
+                                        className="w-5 h-5 sm:w-6 sm:h-6 rounded-lg accent-espresso cursor-pointer shrink-0"
+                                    />
+                                    <span className="text-xs sm:text-sm font-medium text-espresso text-left leading-snug">
+                                        I understand that Rapido deliveries are risky. In the event of any mishap or the driver absconding, Mini Crumbs will refund <strong>30% of the order value</strong>.
+                                    </span>
+                                </label>
                             </div>
 
+                            {/* Sticky so the button is always visible, even below the three checkboxes */}
+                            <div className="sticky bottom-0 z-10 -mx-4 px-4 pt-6 pb-4 space-y-2 bg-gradient-to-t from-cream via-cream/95 to-transparent">
                             <button
-                                disabled={!rapidoAgreed || !deliveryTimeAgreed || isCheckingStock}
+                                disabled={!rapidoAgreed || !deliveryTimeAgreed || !riskAgreed || isCheckingStock}
                                 onClick={async () => {
                                     setIsCheckingStock(true);
                                     const res = await checkCartStock();
@@ -475,7 +489,14 @@ export function Checkout({
                                     <>Continue to Payment <ArrowRight size={20} /></>
                                 )}
                             </button>
-                            <p className="text-center text-[9px] sm:text-[10px] text-cocoa/40 uppercase tracking-widest font-bold">Please agree to the shipping terms to proceed</p>
+                            <p className="text-center text-[9px] sm:text-[10px] text-cocoa/40 uppercase tracking-widest font-bold">
+                                {(() => {
+                                    const left = [rapidoAgreed, deliveryTimeAgreed, riskAgreed].filter(a => !a).length;
+                                    if (left === 0) return 'All set — continue to payment';
+                                    return `Tick ${left} more ${left === 1 ? 'box' : 'boxes'} to continue`;
+                                })()}
+                            </p>
+                            </div>
                         </motion.div>
                     )}
 

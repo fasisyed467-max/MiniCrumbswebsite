@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
-import { Star, Plus, Minus } from 'lucide-react';
+import { Star, Plus, Minus, Clock } from 'lucide-react';
 import { Product } from '../../types';
+import { getPrepTime } from '../../utils/prepTime';
 
 interface MobileProductCardProps {
    product: Product;
@@ -10,6 +11,9 @@ interface MobileProductCardProps {
 }
 
 export function MobileProductCard({ product, qty, onMinus, onOpenSizeSelector }: MobileProductCardProps) {
+   const prepTime = getPrepTime(product.prep_duration);
+   const totalStock = Object.values(product.stock || {}).reduce((a, b) => a + (b || 0), 0);
+   const isSoldOut = !product.is_available || totalStock <= 0;
    return (
       <motion.div
          layout
@@ -40,15 +44,20 @@ export function MobileProductCard({ product, qty, onMinus, onOpenSizeSelector }:
          {/* Interactive Content Layer */}
          <div className="flex-grow pl-6 pr-4 h-full flex flex-col justify-center min-w-0 z-10">
             <h3 className="text-[17px] font-bold text-espresso leading-tight mb-2 line-clamp-2">{product.name}</h3>
-            
+            {prepTime && (
+               <p className="inline-flex items-center gap-1.5 self-start max-w-full min-w-0 text-xs leading-none font-bold text-espresso bg-gold/20 border border-gold/40 rounded-full px-2.5 py-1.5 mb-1.5">
+                  <Clock size={12} className="flex-shrink-0 text-gold" />
+                  <span className="truncate">Prep time: {prepTime}</span>
+               </p>
+            )}
+
             <div className="flex items-end justify-between mt-1">
                <div className="flex flex-col">
-                  <p className="text-xs text-cocoa uppercase tracking-wider font-semibold opacity-60 mb-0.5">Price</p>
                   <p className="text-[16px] font-black text-espresso">₹{product.price}</p>
-                  {product.is_available && (
-                     <p className="text-[10px] font-bold text-green-600/60 uppercase tracking-widest mt-1">
-                        {Object.values(product.stock || {}).reduce((a, b) => a + (b || 0), 0)} left
-                     </p>
+                  {isSoldOut ? (
+                     <p className="text-[10px] font-bold text-red-500/70 uppercase tracking-widest mt-1">Sold</p>
+                  ) : (
+                     <p className="text-[10px] font-bold text-green-600/60 uppercase tracking-widest mt-1">{totalStock} left</p>
                   )}
                </div>
                

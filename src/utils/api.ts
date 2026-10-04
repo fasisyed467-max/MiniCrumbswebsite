@@ -8,6 +8,19 @@ let productsCache: Product[] | null = null;
 let lastFetch = 0;
 const CACHE_TTL = 30000; // 30 seconds
 
+// Reads every row of a query, 1000 at a time (Supabase's per-request cap).
+async function fetchAllPages(buildQuery: (from: number, to: number) => PromiseLike<{ data: any[] | null; error: any }>) {
+  const pageSize = 1000;
+  const rows: any[] = [];
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await buildQuery(from, from + pageSize - 1);
+    if (error) throw error;
+    rows.push(...(data || []));
+    if (!data || data.length < pageSize) break;
+  }
+  return rows;
+}
+
 export const api = {
   async fetchProducts(force = false): Promise<Product[]> {
     const now = Date.now();
@@ -56,6 +69,47 @@ export const api = {
       console.error('Error fetching orders:', error);
       return [];
     }
+  },
+
+  // Dashboard stats. Supabase returns at most 1000 rows per request, so rows are read
+  // page by page and counts use head-only count queries.
+  async fetchOrderRangeStats(startISO: string, endISO: string) {
+    const rows = await fetchAllPages((from, to) =>
+      supabase
+        .from('orders')
+        .select('status,total_amount')
+        .gte('created_at', startISO)
+        .lte('created_at', endISO)
+        .order('created_at', { ascending: false })
+        .range(from, to)
+    );
+    return { rangeRows: rows as { status: string; total_amount: number | null }[] };
+  },
+
+  async fetchLifetimeStats() {
+    const countType = async (type: 'standard' | 'custom') => {
+      const { count, error } = await supabase
+        .from('orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('type', type);
+      if (error) throw error;
+      return count || 0;
+    };
+
+    const [standardCount, customCount, rows] = await Promise.all([
+      countType('standard'),
+      countType('custom'),
+      fetchAllPages((from, to) =>
+        supabase
+          .from('orders')
+          .select('total_amount')
+          .neq('status', 'cancelled')
+          .order('id', { ascending: true })
+          .range(from, to)
+      )
+    ]);
+    const revenue = (rows as { total_amount: number | null }[]).reduce((sum, o) => sum + (o.total_amount || 0), 0);
+    return { standardCount, customCount, revenue };
   },
 
   async fetchCustomOrders() {

@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
-import { Star, Plus } from 'lucide-react';
+import { Star, Plus, Clock } from 'lucide-react';
 import { Product } from '../../types';
+import { getPrepTime } from '../../utils/prepTime';
 
 interface ProductCardProps {
    product: Product;
@@ -8,6 +9,7 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, onOpenSizeSelector }: ProductCardProps) {
+   const prepTime = getPrepTime(product.prep_duration);
    console.log("IMAGE URL:", product.image);
    return (
       <motion.div
@@ -40,7 +42,7 @@ export function ProductCard({ product, onOpenSizeSelector }: ProductCardProps) {
                </div>
             )}
             <div className="absolute top-4 right-4 flex flex-col gap-2 items-end">
-               <div className="bg-white/90 backdrop-blur px-3 py-1.5 rounded-full text-sm font-medium text-espresso shadow-sm">
+               <div className="bg-white backdrop-blur px-4 py-2 rounded-full text-base font-bold text-espresso shadow-md">
                   ₹{product.price}
                </div>
                {product.is_available && (
@@ -52,6 +54,11 @@ export function ProductCard({ product, onOpenSizeSelector }: ProductCardProps) {
          </div>
          <div className="p-6 flex flex-col flex-grow">
             <h3 className="text-xl font-medium mb-2 text-espresso">{product.name}</h3>
+            {prepTime && (
+               <p className="inline-flex items-center gap-1 self-start text-[11px] font-medium text-cocoa/70 bg-cream-dark rounded-full px-2.5 py-1 mb-3">
+                  <Clock size={11} className="flex-shrink-0" /> Preparation time: {prepTime}
+               </p>
+            )}
             <p className="text-sm font-light text-cocoa/80 mb-6 flex-grow">{product.desc}</p>
             <button
                onClick={() => product.is_available && onOpenSizeSelector(product)}
